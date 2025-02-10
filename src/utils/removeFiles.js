@@ -71,7 +71,7 @@ export const photoUpload = (req, fieldName, uploadDirectory) => {
     // Generate file URLs
     req.body[fieldName] = req.files[fieldName].map(
       (file) =>
-        `https://api.request-sa.com/${uploadDirectory}/${file.filename
+        `http://localhost:8000/${uploadDirectory}/${file.filename
           .split(" ")
           .join("-")}`
     );
@@ -99,7 +99,7 @@ export const photoUpload = (req, fieldName, uploadDirectory) => {
 
     // Assign the first file URL to the fileUrl variable
     if (req.body[fieldName]) {
-      fileUrl = req.body[fieldName][0];
+      fileUrl = req.body[fieldName];
     }
   }
 
