@@ -9,6 +9,5 @@ authRouter.post("/signup",validation(registerValidationSchema), authController.s
 authRouter.post("/signin", authController.signIn);  
 authRouter.post("/admin/signin", authController.adminSignIn);  
 authRouter.post("/forget", authController.forgetPassword);  
-authRouter.post("/resend", authController.resend);  
 
 export default authRouter;

@@ -6,7 +6,6 @@ const userSchema = mongoose.Schema(
   {
     name: {
       type: String,
-      trim: true,
       required: [true, "Name is a required field."],
       minLength: [2, "Name is too short."],
     },

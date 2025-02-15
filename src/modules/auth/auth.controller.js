@@ -38,7 +38,6 @@ export const signUp = catchAsync(async (req, res, next) => {
     return res.status(409).json({ message: err_email2 });
   }
 
-
   req.body.dateOfBirth = new Date("1950/01/02");
   req.body.verificationCode = generateUniqueId({
     length: 4,
@@ -165,48 +164,7 @@ export const adminSignIn = catchAsync(async (req, res, next) => {
   }
 });
 
-export const resend = catchAsync(async (req, res, next) => {
-  let err_email = "worng email";
-  let err_email2 = "this email  is not valid";
-  let err_pass = "worng email or password";
-  let text = `Email Verification Code: `;
 
-  if (req.query.lang == "ar") {
-    err_email = "البريد الالكتروني غير صحيح";
-    err_email2 = "هذا البريد الالكتروني غير صحيح";
-    err_pass = "البريد الالكتروني او كلمة المرور غير صحيحة";
-    text = ` : رمز التحقق من البريد الالكتروني: `;
-  }
-  if (req.body.email !== "") {
-    let { email } = req.body;
-    let userData = await userModel.findOne({ email });
-    if (!userData) return res.status(401).json({ message: err_pass });
-    if (userData) {
-      userData.verificationCode = generateUniqueId({
-        length: 4,
-        useLetters: false,
-      });
-      text = text + `${userData.verificationCode}`;
-
-      sendEmail(userData.email, text);
-      await userData.save();
-      let token = jwt.sign(
-        { name: userData.name, userId: userData._id },
-        process.env.JWT_SECRET_KEY
-      );
-      let verificationCode = userData.verificationCode;
-      return res.json({
-        message: "success",
-        verificationCode,
-        userData,
-        token,
-      });
-    }
-    return res.status(401).json({ message: err_email });
-  } else {
-    return res.status(409).json({ message: err_email2 });
-  }
-});
 export const forgetPassword = catchAsync(async (req, res, next) => {
   let err_email2 = "this email  is not valid";
   let err_email = "Email Not Found";
@@ -291,4 +249,3 @@ export const allowTo = (...roles) => {
     next();
   };
 };
-

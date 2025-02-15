@@ -7,12 +7,34 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    desc: {
+    shortDescription: {
       type: String,
       required: true,
     },
-    images: {
+    description: {
+      type: String,
+      required: true,
+    },
+    brand: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "brand",
+      required: true,
+    },
+    colors: {
       type: [String],
+    },
+    pic: {
+      type: String,
+      default: undefined,
+    },
+    gallery: {
+      type: [String],
+      default: [],
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "category",
+      // required: true,
     },
     store: [
       {
@@ -27,18 +49,38 @@ const productSchema = mongoose.Schema(
         },
       },
     ],
-    unitPrice: {
+    suppliers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "supplier",
+        required: true,
+      },
+    ],
+    costPrice: {
       type: Number,
       required: true,
+    },
+    sellingPrice: {
+      type: Number,
+      required: true,
+    },
+    discountPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    discountPercentage: {
+      type: String,
+      required: true,
+      default: 0,
     },
   },
   { timestamps: true }
 );
 
 productSchema.pre("save", async function (next) {
-  
   const queryData = this.$locals.queryData;
-    let err_1 = "There are inventory(s) that do not exist";
+  let err_1 = "There are inventory(s) that do not exist";
   if (queryData?.lang == "ar") {
     err_1 = "هناك مخزون (ات) غير موجود";
   }
@@ -46,10 +88,12 @@ productSchema.pre("save", async function (next) {
     // Extract all inventory IDs
     const inventoryIds = this.store.map((item) => item.inventory);
 
-    // Check if all inventory IDs exist in the database
-    const existingInventories = await inventoryModel.find({
-      _id: { $in: inventoryIds },
-    }).select("_id");
+
+    const existingInventories = await inventoryModel
+      .find({
+        _id: { $in: inventoryIds },
+      })
+      .select("_id");
 
     const existingIds = existingInventories.map((inv) => inv._id.toString());
     const missingIds = inventoryIds
@@ -66,4 +110,15 @@ productSchema.pre("save", async function (next) {
   }
 });
 
+productSchema.pre(/^delete/, { document: false, query: true }, async function () {
+  const doc = await this.model.findOne(this.getFilter());
+  if (doc) {
+    doc.pic && removeFile("products", doc.pic);
+    if (Array.isArray(doc.gallery) && doc.gallery.length > 0) {
+      doc.gallery.forEach((file) => {
+        removeFile("products", file);
+      });
+    } 
+  }
+});
 export const productModel = mongoose.model("product", productSchema);

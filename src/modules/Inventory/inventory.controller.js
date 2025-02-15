@@ -1,5 +1,4 @@
 import { inventoryModel } from "../../../database/models/inventory.model.js";
-
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
