@@ -39,10 +39,6 @@ const userSchema = mongoose.Schema(
       type: String,
       // required:true
     },
-    profilePic: {
-      type: String,
-      default: "",
-    },
     access: {
       create: { type: Boolean, default: false },
       read: { type: Boolean, default: false },
@@ -63,9 +59,9 @@ const userSchema = mongoose.Schema(
 //   doc.profilePic = process.env.BASE_URL + "profilePic/" + doc.profilePic;
 // });
 
-// userSchema.pre("save", function () {
-//   this.password = bcrypt.hashSync(this.password, Number(process.env.SALTED_VALUE));
-// });
+userSchema.pre("save", function () {
+  this.password = bcrypt.hashSync(this.password, Number(process.env.SALTED_VALUE));
+});
 userSchema.pre("findOneAndUpdate", function () {
   if (this._update.password) {
     this._update.password = bcrypt.hashSync(
@@ -82,7 +78,6 @@ userSchema.pre(/^delete/, { document: false, query: true }, async function () {
 
   }
 });
-userSchema.pre(/^find/, function () {
-  this.populate("role");
-});
+// userSchema.pre(/^find/, function () {
+// });
 export const userModel = mongoose.model("user", userSchema);

@@ -21,11 +21,10 @@ export const signUp = catchAsync(async (req, res, next) => {
     err_pass = "كلمة المرور يجب ان تكون 8 حروف على الاقل";
     text = ` : رمز التحقق من البريد الالكتروني: `;
   }
-  let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
   if (req.body.phone === "" || req.body.phone.length < 10) {
     return res.status(409).json({ message: err_phone2 });
   }
-  if (req.body.email !== "" && req.body.email.match(emailFormat)) {
+  if (req.body.email !== "") {
     let existUser = await userModel.findOne({ phone: req.body.phone });
     let existUser2 = await userModel.findOne({ email: req.body.email });
     if (existUser) {
@@ -38,7 +37,6 @@ export const signUp = catchAsync(async (req, res, next) => {
     return res.status(409).json({ message: err_email2 });
   }
 
-  req.body.dateOfBirth = new Date("1950/01/02");
   req.body.verificationCode = generateUniqueId({
     length: 4,
     useLetters: false,
@@ -46,10 +44,10 @@ export const signUp = catchAsync(async (req, res, next) => {
   if (req.body.password.length < 8) {
     return res.status(409).json({ message: err_pass });
   }
-  req.body.password = bcrypt.hashSync(
-    req.body.password,
-    Number(process.env.SALT_ROUNDS)
-  );
+  // req.body.password = bcrypt.hashSync(
+  //   req.body.password,
+  //   Number(process.env.SALT_ROUNDS)
+  // );
 
   let results = new userModel(req.body);
   let token = jwt.sign(
@@ -58,7 +56,6 @@ export const signUp = catchAsync(async (req, res, next) => {
   );
   text = text + `${results.verificationCode}`;
 
-  sendEmail(results.email, text);
   await results.save();
   res.json({ message: "added", token, results });
 });
@@ -100,21 +97,17 @@ export const signIn = catchAsync(async (req, res, next) => {
     text = ` : رمز التحقق من البريد الالكتروني: `;
   }
   let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-  if (req.body.email !== "" && req.body.email.match(emailFormat)) {
+  if (req.body.email !== "" ) {
     let { email, password } = req.body;
     let userData = await userModel.findOne({ email });
     if (!userData) return res.status(401).json({ message: err_pass });
     const match = bcrypt.compareSync(password, userData.password);
     if (match && userData) {
-      // if (userData.userType == "admin") {
-      //   return res.status(401).json({ message: err_admin });
-      // }
       userData.verificationCode = generateUniqueId({
         length: 4,
         useLetters: false,
       });
       text = text + `${userData.verificationCode}`;
-      sendEmail(userData.email, text);
       await userData.save();
       let token = jwt.sign(
         { name: userData.name, userId: userData._id },

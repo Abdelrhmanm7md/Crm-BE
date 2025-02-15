@@ -2,51 +2,6 @@ import { userModel } from "../../../database/models/user.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import AppError from "../../utils/appError.js";
-import { photoUpload } from "../../utils/removeFiles.js";
-import { contactUs, contactUs2, sendInvite } from "../../email/sendEmail.js";
-import { sendNotification } from "../../utils/sendNotification.js";
-
-const updateprofilePic = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-  let check = await userModel.findById(id);
-  let err_1 = "User not found!";
-  if (req.query.lang == "ar") {
-    err_1 = "المستخدم غير موجود";
-  }
-  if (!check) {
-    return res.status(404).json({ message: err_1 });
-  }
-  let profilePic = photoUpload(req, "profilePic", "profilePic");
-  profilePic = profilePic.replace(`https://api.request-sa.com/`, "");
-
-  let updatedProfile = await userModel.findByIdAndUpdate(
-    id,
-    { profilePic: profilePic },
-    { new: true }
-  );
-
-  if (!updatedProfile) {
-    return res.status(404).json({ message: err_1 });
-  }
-  res
-    .status(200)
-    .json({ message: "Profile updated successfully!", profilePic });
-});
-
-const postMessage = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-  let user = await userModel.findById(id);
-  let err_1 = "couldn't post! user not found!";
-  let message = "Message sent to admin";
-  if (req.query.lang == "ar") {
-    err_1 = "لا يمكن إرسال الرسالة! المستخدم غير موجود!";
-    message = "تم إرسال الرسالة إلى المسؤول";
-  }
-  !user && res.status(404).json({ message: "couldn't post! user not found!" });
-  contactUs(user.name, user.email, req.body.message,user._id);
-  res.json({ message: message, user });
-});
-
 
 
 const getAllUsersByAdmin = catchAsync(async (req, res, next) => {
@@ -103,23 +58,10 @@ const updateUser = catchAsync(async (req, res, next) => {
     dateOfBirth,
     role,
     projects,
-    profilePic,
     verificationCode,
     tags,
     otp,
-    confirmedPhone,
-    presentAddress,
-    city,
-    country,
-    postalCode,
-    verified,
     userType,
-    companyName,
-    vocation,
-    offersAndPackages,
-    twoWayAuthentication,
-    notifications,
-    renewalSubscription,
     userGroups,
     access,
     plan,
@@ -134,23 +76,9 @@ const updateUser = catchAsync(async (req, res, next) => {
       dateOfBirth,
       role,
       otp,
-      profilePic,
       verificationCode,
-      confirmedPhone,
-      presentAddress,
-      city,
-      country,
-      postalCode,
-      verified,
       userType,
-      companyName,
-      vocation,
-      offersAndPackages,
-      notifications,
-      renewalSubscription,
-      twoWayAuthentication,
       access,
-      plan,
     },
     { new: true }
   );
@@ -199,6 +127,4 @@ export {
   updateUser,
   updateUser2,
   deleteUser,
-  updateprofilePic,
-  postMessage,
 };
