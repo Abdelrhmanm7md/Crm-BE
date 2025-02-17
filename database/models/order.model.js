@@ -4,7 +4,7 @@ const orderSchema = mongoose.Schema(
   {
     orderNumber: {
       type: String,
-      unique: true,
+      // unique: true,
       required: true,
     },
     supplier: {
@@ -15,6 +15,11 @@ const orderSchema = mongoose.Schema(
     shippingCompany:{
       type: mongoose.Schema.Types.ObjectId,
       ref: "shippingCompany",
+      required: true,
+    },
+    inventory:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "inventory",
       required: true,
     },
     customerName: {
@@ -65,6 +70,42 @@ const orderSchema = mongoose.Schema(
 );
 
 orderSchema.pre("save", async function (next) {
+  const Product = mongoose.model("product");
+
+  try {
+    for (const item of this.products) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        throw new Error(`Product with ID ${item.product} not found.`);
+      }
+
+      // Find the matching inventory for this order
+      const storeItem = product.store.find((store) => String(store.inventory._id) === String(this.inventory));
+
+      if (!storeItem) {
+        throw new Error(`Inventory ${this.inventory} not found for product: ${product.name}`);
+      }
+
+      // Check if there's enough quantity available
+      if (storeItem.quantity < item.quantity) {
+        throw new Error(`Insufficient quantity for product: ${product.name}`);
+      }
+
+      // Deduct the quantity using updateOne to bypass product schema hooks
+      await Product.updateOne(
+        { _id: item.product, "store.inventory": this.inventory },
+        { $inc: { "store.$.quantity": -item.quantity } }
+      );
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+orderSchema.pre("save", async function (next) {
   this.totalAmount = this.products.reduce((acc, product) => {
     return acc + product.price * product.quantity;
   }, 0);
@@ -82,4 +123,58 @@ orderSchema.pre("findOneAndUpdate", async function () {
     );
   }
 });
+
+orderSchema.pre("findOneAndUpdate", async function (next) {
+  const Product = mongoose.model("product");
+
+  const update = this.getUpdate();
+  const { products, inventory, orderStatus } = update;
+
+  if (!products || !inventory || !orderStatus) {
+    return next();
+  }
+
+  try {
+    for (const item of products) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        throw new Error(`Product with ID ${item.product} not found.`);
+      }
+
+      const storeItem = product.store.find((store) => String(store.inventory._id) === String(inventory));
+      if (!storeItem) {
+        throw new Error(`Inventory ${inventory} not found for product: ${product.name}`);
+      }
+
+      if (orderStatus === "canceled") {
+        // Return the quantities to inventory
+        await Product.updateOne(
+          { _id: item.product, "store.inventory": inventory },
+          { $inc: { "store.$.quantity": item.quantity } }
+        );
+      } else {
+        // Deduct quantities if order is not canceled
+        if (storeItem.quantity < item.quantity) {
+          throw new Error(`Insufficient quantity for product: ${product.name}`);
+        }
+        await Product.updateOne(
+          { _id: item.product, "store.inventory": inventory },
+          { $inc: { "store.$.quantity": -item.quantity } }
+        );
+      }
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+orderSchema.pre(/^find/, function () {
+  this.populate({"path":"products.product"});
+  this.populate("supplier");
+  this.populate("shippingCompany");
+  this.populate("product");
+})
 export const orderModel = mongoose.model("order", orderSchema);

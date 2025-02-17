@@ -4,7 +4,7 @@ import path from "path";
 
 export async function removeFiles(folderName, fieldName) {
   console.log(fieldName, "This is the fieldName");
-  fieldName =Array.isArray(fieldName) ? fieldName : [fieldName];
+  fieldName = Array.isArray(fieldName) ? fieldName : [fieldName];
   if (!fieldName || !Array.isArray(fieldName)) {
     console.error("fieldName is either undefined or not an array");
     return;
@@ -13,12 +13,8 @@ export async function removeFiles(folderName, fieldName) {
     return ids.every((id) => mongoose.Types.ObjectId.isValid(id));
   }
 
-
   const photoPaths =
-    fieldName &&
-    fieldName.map((url) =>
-      url.replace(`${folderName}/`, "")
-    );
+    fieldName && fieldName.map((url) => url.replace(`${folderName}/`, ""));
   console.log(photoPaths);
 
   photoPaths.forEach((photoPath) => {
@@ -43,10 +39,7 @@ export async function removeFiles(folderName, fieldName) {
 }
 
 export function removeFile(folderName, fieldName) {
-  const photoPath = fieldName.replace(
-    `${folderName}/`,
-    ""
-  );
+  const photoPath = fieldName.replace(`${folderName}/`, "");
   const fullPath = path.resolve(`uploads/${folderName}`, photoPath);
   // Check if the file exists
   fsExtra.access(fullPath, fsExtra.constants.F_OK, (err) => {
@@ -71,7 +64,7 @@ export const photoUpload = (req, fieldName, uploadDirectory) => {
     // Generate file URLs
     req.body[fieldName] = req.files[fieldName].map(
       (file) =>
-        `http://localhost:8000/${uploadDirectory}/${file.filename
+        `process.env.LOCALHOST${uploadDirectory}/${file.filename
           .split(" ")
           .join("-")}`
     );

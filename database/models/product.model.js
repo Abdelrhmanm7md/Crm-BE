@@ -49,13 +49,12 @@ const productSchema = mongoose.Schema(
         },
       },
     ],
-    suppliers: [
+    suppliers: 
       {
-        type: mongoose.Schema.Types.ObjectId,
+        type: [mongoose.Schema.Types.ObjectId],
         ref: "supplier",
         required: true,
       },
-    ],
     costPrice: {
       type: Number,
       required: true,
@@ -87,7 +86,6 @@ productSchema.pre("save", async function (next) {
   try {
     // Extract all inventory IDs
     const inventoryIds = this.store.map((item) => item.inventory);
-
 
     const existingInventories = await inventoryModel
       .find({
@@ -121,4 +119,8 @@ productSchema.pre(/^delete/, { document: false, query: true }, async function ()
     } 
   }
 });
+
+productSchema.pre(/^find/, function () {
+  this.populate({"path":"store.inventory"});
+})
 export const productModel = mongoose.model("product", productSchema);

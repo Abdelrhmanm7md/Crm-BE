@@ -44,10 +44,14 @@ export const signUp = catchAsync(async (req, res, next) => {
   if (req.body.password.length < 8) {
     return res.status(409).json({ message: err_pass });
   }
-  // req.body.password = bcrypt.hashSync(
-  //   req.body.password,
-  //   Number(process.env.SALT_ROUNDS)
-  // );
+  if(req.body.userType === "admin"){
+    req.body.access = {
+      create : true,
+      read : true,
+      edit : true,
+      delete : true,
+    }
+  }
 
   let results = new userModel(req.body);
   let token = jwt.sign(

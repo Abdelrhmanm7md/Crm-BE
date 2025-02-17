@@ -21,7 +21,7 @@ export const registerValidationSchema = Joi.object({
 });
 
 export const loginValidationSchema = Joi.object({
-  phone: Joi.string().required().messages({
+  email: Joi.string().required().messages({
     'any.required': `"phoneNumber" is a required field`
   }),
   password: Joi.string().required().messages({
