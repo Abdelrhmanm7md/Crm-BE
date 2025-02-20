@@ -5,7 +5,7 @@ import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createSubCategory = catchAsync(async (req, res, next) => {
-  req.body.createdBy = req.subCategory._id;
+  req.body.createdBy = req.user._id;
   let results = new subCategoryModel(req.body);
   let added = await results.save({ context: { query: req.query } });
   res.status(201).json({ message: "added", added });

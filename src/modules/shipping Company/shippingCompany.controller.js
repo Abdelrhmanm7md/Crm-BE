@@ -4,7 +4,7 @@ import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createShippingCompany = catchAsync(async (req, res, next) => {
-  req.body.createdBy = req.shippingCompany._id;
+   req.body.createdBy = req.user._id;
     let newshippingCompany = new shippingCompanyModel(req.body);
     let addedshippingCompany = await newshippingCompany.save({ context: { query: req.query } });
   

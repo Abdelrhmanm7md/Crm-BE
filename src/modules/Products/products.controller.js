@@ -7,7 +7,7 @@ import { photoUpload, removeFile } from "../../utils/removeFiles.js";
 
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
-  req.body.createdBy = req.product._id;
+  req.body.createdBy = req.user._id;
   let gallery = photoUpload(req, "gallery", "products");
   let pic = photoUpload(req, "pic", "products");
   pic = pic[0].replace(`${process.env.LOCALHOST}`, "");
