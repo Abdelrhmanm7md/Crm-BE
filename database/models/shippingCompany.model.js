@@ -32,7 +32,6 @@ const shippingCompanySchema = mongoose.Schema(
           },
         },
       ],
-      default: [],
     },
     collectionAmount: {
       type: Number,
