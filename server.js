@@ -30,26 +30,26 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(hpp());  // Prevent HTTP Parameter Pollution  --> in case of query string parameters
-app.use(express.json({limit:'10kb'}));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("uploads"));
 app.use(mongoSanitize());
 app.use(xssSanitizer);
 app.use(helmet());
 
-const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-  message: 'Too many requests from this IP, please try again after an hour',
-  // standardHeaders: true, // Send rate limit info in headers
-  // legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res) => {
-    res.status(429).json({ error: 'Too many requests from this IP, please try again after an hour' });
-  }
-})
+// const limiter = rateLimit({
+// 	windowMs: 15 * 60 * 1000, // 15 minutes
+// 	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+//   message: 'Too many requests from this IP, please try again after an hour',
+//   // standardHeaders: true, // Send rate limit info in headers
+//   // legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+//   handler: (req, res) => {
+//     res.status(429).json({ error: 'Too many requests from this IP, please try again after an hour' });
+//   }
+// })
 
-// Apply the rate limiting middleware to all requests.
-app.use("/api",limiter)
+// // Apply the rate limiting middleware to all requests.
+// app.use("/api",limiter)
 dbConnection();
 app.use((err, req, res, next) => {
   if (err.code === 'ENOTFOUND') {

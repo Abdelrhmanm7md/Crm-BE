@@ -2,6 +2,7 @@ import { userModel } from "../../../database/models/user.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import AppError from "../../utils/appError.js";
+import exportData from "../../utils/export.js";
 
 
 const getAllUsersByAdmin = catchAsync(async (req, res, next) => {
@@ -16,7 +17,7 @@ const getAllUsersByAdmin = catchAsync(async (req, res, next) => {
   let results = await ApiFeat.mongooseQuery;
   if (!results) {
     return res.status(404).json({
-      message: "No users was found! add a new user to get started!",
+      message
     });
   }
   res.json({
@@ -48,74 +49,45 @@ const updateUser = catchAsync(async (req, res, next) => {
   if (req.query.lang == "ar") {
     err = "لا يمكن التحديث! المستخدم غير موجود";
   }
-  if (req.body.dateOfBirth) {
-    req.body.dateOfBirth = DateTime.fromISO(req.body.dateOfBirth).toISODate();
-  }
-  let {
-    name,
-    phone,
-    password,
-    dateOfBirth,
-    role,
-    projects,
-    verificationCode,
-    tags,
-    otp,
-    userType,
-    userGroups,
-    access,
-    plan,
-  } = req.body;
-  let results = await userModel.findByIdAndUpdate(
-    id,
-    {
-      $push: { projects, tags, userGroups },
-      name,
-      phone,
-      password,
-      dateOfBirth,
-      role,
-      otp,
-      verificationCode,
-      userType,
-      access,
-    },
-    { new: true }
-  );
+  let results = await userModel.findByIdAndUpdate(id,req.body,{new: true });
   !results && res.status(404).json({ message: err });
   results && res.json({ message: "user updated successfully", results });
 });
 
+const exportUsers = catchAsync(async (req, res, next) => {
+  // Define variables before passing them
+  const query = {};
+  const projection = { _id: 0 };
+  const selectedFields = req.query.selectedFields || [];
+  const specificIds = req.query.specificIds || [];
 
-const updateUser2 = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-  let { projects, tags, userGroups } = req.body;
-  let err = "couldn't update! not found!";
-  if (req.query.lang == "ar") {
-    err = "لا يمكن التحديث! المستخدم غير موجود";
-  }
-  let results = await userModel.findByIdAndUpdate(
-    id,
-    {
-      $pull: { projects, tags, userGroups },
-    },
-    { new: true }
+  await exportData(
+    req,
+    res,
+    next,
+    userModel,
+    query,
+    projection,
+    selectedFields,
+    specificIds
   );
-  !results && res.status(404).json({ message: err });
-  results && res.json({ message: "user updated successfully", results });
 });
+
 
 const deleteUser = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-  let err = "couldn't Delete! not found!";
-  if (req.query.lang == "ar") {
-    err = "لا يمكن المسح! المستخدم غير موجود";
-  }
-  let deletedUser = await userModel.deleteOne({ _id: id });
 
-  if (!deletedUser) {
-    return res.status(404).json({ message: err });
+  let user = await userModel.findById(id);
+  let message_1 = "Couldn't delete! Not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لم يتم الحذف! غير موجود!"
   }
+  if (!user) {
+    return res.status(404).json({ message: message_1 });
+  }
+
+  user.userId = req.userId;
+  await user.deleteOne();
 
   res.status(200).json({ message: "User deleted successfully!" });
 });
@@ -125,6 +97,6 @@ export {
   getAllUsersByAdmin,
   getUserById,
   updateUser,
-  updateUser2,
+  exportUsers,
   deleteUser,
 };

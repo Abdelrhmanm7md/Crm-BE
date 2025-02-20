@@ -1,10 +1,13 @@
+import { query } from "express";
 import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
+import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import { photoUpload, removeFile } from "../../utils/removeFiles.js";
 
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
+  req.body.createdBy = req.product._id;
   let gallery = photoUpload(req, "gallery", "products");
   let pic = photoUpload(req, "pic", "products");
   pic = pic[0].replace(`${process.env.LOCALHOST}`, "");
@@ -29,19 +32,44 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   // .sort()
   // .search()
   // .fields();
-  !ApiFeat && res.status(404).json({ message: "No Product was found!" });
+  let message_1 = "Product not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "المنتج غير موجود"
+  }
+  !ApiFeat && res.status(404).json({ message: message_1 });
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
+});
+const exportProduct = catchAsync(async (req, res, next) => {
+  // Define variables before passing them
+  const query = {};
+  const projection = { _id: 0 };
+  const selectedFields = req.query.selectedFields || [];
+  const specificIds = req.query.specificIds || [];
+
+  await exportData(
+    req,
+    res,
+    next,
+    productModel,
+    query,
+    projection,
+    selectedFields,
+    specificIds
+  );
 });
 
 const getProductById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
   let Product = await productModel.findById(id);
-
+  let message_1 = "Product not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "المنتج غير موجود"
+  }
   if (!Product) {
-    return res.status(404).json({ message: "Product not found!" });
+    return res.status(404).json({ message: message_1 });
   }
 
   res.status(200).json({ message: "Done", Product });
@@ -49,52 +77,54 @@ const getProductById = catchAsync(async (req, res, next) => {
 
 const updateProduct = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const {
-    name,
-    category,
-    colors,
-    description,
-    shortDescription,
-    brand,
-    costPrice,
-    store,
-    sellingPrice,
-    discountPrice,
-    discountPercentage,
-    suppliersToAdd,
-    suppliersToRemove,
-  } = req.body;
+  // const {
+  //   name,
+  //   category,
+  //   colors,
+  //   description,
+  //   shortDescription,
+  //   brand,
+  //   costPrice,
+  //   store,
+  //   sellingPrice,
+  //   discountPrice,
+  //   discountPercentage,
+  //   suppliersToAdd,
+  //   suppliersToRemove,
+  // } = req.body;
 
-  const update = {
-    name,
-    category,
-    colors,
-    shortDescription,
-    description,
-    brand,
-    costPrice,
-    store,
-    sellingPrice,
-    discountPrice,
-    discountPercentage,
-  };
+  // const update = {
+  //   name,
+  //   category,
+  //   colors,
+  //   shortDescription,
+  //   description,
+  //   brand,
+  //   costPrice,
+  //   store,
+  //   sellingPrice,
+  //   discountPrice,
+  //   discountPercentage,
+  // };
 
-  if (suppliersToAdd && suppliersToAdd.length > 0) {
-    update.$push = { suppliers: { $each: suppliersToAdd } };
+  // if (suppliersToAdd && suppliersToAdd.length > 0) {
+  //   update.$push = { suppliers: { $each: suppliersToAdd } };
+  // }
+
+  // if (suppliersToRemove && suppliersToRemove.length > 0) {
+  //   update.$pull = { suppliers: { $in: suppliersToRemove } };
+  // }
+
+  // const updatedProduct = await productModel.findByIdAndUpdate(id, update, {new: true,});
+  const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {new: true, context: { query: req.query }});
+  let message_1 = "Couldn't update!  not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "تعذر التحديث! غير موجود!"
   }
-
-  if (suppliersToRemove && suppliersToRemove.length > 0) {
-    update.$pull = { suppliers: { $in: suppliersToRemove } };
-  }
-
-  const updatedProduct = await productModel.findByIdAndUpdate(id, update, {
-    new: true,
-  });
-
   if (!updatedProduct) {
     return res
       .status(404)
-      .json({ message: "Couldn't update! Product not found!" });
+      .json({ message: message_1 });
   }
 
   res
@@ -213,16 +243,22 @@ const updatePhotos = catchAsync(async (req, res, next) => {
 });
 
 const deleteProduct = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-
-  let deletedProduct = await productModel.findByIdAndDelete({ _id: id });
-
-  if (!deletedProduct) {
-    return res.status(404).json({ message: "Couldn't delete!  not found!" });
-  }
-
-  res.status(200).json({ message: "Product deleted successfully!" });
-});
+    let { id } = req.params;
+  
+    let product = await productModel.findById(id);
+    let message_1 = "Couldn't delete! Not found!"
+    if(req.query.lang == "ar"){
+      message_1 = "لم يتم الحذف! غير موجود!"
+    }
+    if (!product) {
+      return res.status(404).json({ message: message_1 });
+    }
+  
+    product.userId = req.userId;
+    await product.deleteOne();
+  
+    res.status(200).json({ message: "Product deleted successfully!" });
+  });
 
 export {
   createProduct,
@@ -231,4 +267,5 @@ export {
   deleteProduct,
   updateProduct,
   updatePhotos,
+  exportProduct,
 };

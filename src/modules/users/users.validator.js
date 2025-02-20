@@ -18,8 +18,8 @@ export const registerValidationSchema = Joi.object({
   username: Joi.string().min(3).max(30).required().messages({
     'string.base': `"username" should be a type of 'text'`,
     'string.empty': `"username" cannot be an empty field`,
-    'string.min': `"username" should have a minimum length of {#limit}`,
-    'string.max': `"username" should have a maximum length of {#limit}`,
+    'string.min': `"username" should have a minimum length of {#3}`,
+    'string.max': `"username" should have a maximum length of {#30}`,
     'any.required': `"username" is a required field`
   }),
   password: Joi.string().min(6).pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/).required().messages({
@@ -27,18 +27,15 @@ export const registerValidationSchema = Joi.object({
     'string.min': `"password" should have a minimum length of {#limit}`,
     'any.required': `"password" is a required field`
   }),
-  phoneNumber: Joi.string().length(11).pattern(/^[0-9]+$/).required().messages({
+  phone: Joi.string().length(11).pattern(/^[0-9]+$/).required().messages({
     'string.length': `"phoneNumber" should have a length of {#limit}`,
     'string.pattern.base': `"phoneNumber" should contain only digits`,
     'any.required': `"phoneNumber" is a required field`
   }),
-  companyBranch: Joi.string().required().messages({
-    'any.required': `"companyBranch" is a required field`
-  })
 });
 
 export const loginValidationSchema = Joi.object({
-  phoneNumber: Joi.string().required().messages({
+  phone: Joi.string().required().messages({
     'any.required': `"phoneNumber" is a required field`
   }),
   password: Joi.string().required().messages({

@@ -5,6 +5,7 @@ import AppError from "../../utils/appError.js";
 import { userModel } from "../../../database/models/user.model.js";
 import generateUniqueId from "generate-unique-id";
 import { sendEmail } from "../../email/sendEmail.js";
+import { logModel } from "../../../database/models/log.model.js";
 
 export const signUp = catchAsync(async (req, res, next) => {
   let err_phone = "This Phone  already exist";
@@ -59,36 +60,12 @@ export const signUp = catchAsync(async (req, res, next) => {
     process.env.JWT_SECRET_KEY
   );
   text = text + `${results.verificationCode}`;
+  results.password = bcrypt.hashSync(results.password, Number(process.env.SALTED_VALUE));
 
   await results.save();
   res.json({ message: "added", token, results });
 });
 
-// export const signInWithPhone = catchAsync(async (req, res, next) => {
-//   // let phoneFormat = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/; //+XX XXXXX XXXXX
-//   let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-//   if (
-//     req.body.email !== "" &&
-//     req.body.email.match(emailFormat) &&
-//     req.body.phone !== ""
-//     // req.body.phone.match(phoneFormat)
-//   ) {
-//     // if (req.body.phone !== "") {
-//     let { phone } = req.body.phone;
-//     let userData = await userModel.findOne({ phone });
-//     if (!userData) return res.status(404).json({ message: "User Not Found" });
-//     if (userData) {
-//       let token = jwt.sign(
-//         { name: userData.name, userId: userData._id },
-//         process.env.JWT_SECRET_KEY
-//       );
-//       return res.json({ message: "success", token, userData });
-//     }
-//     return res.status(401).json({ message: "worng phone " });
-//   } else {
-//     return res.status(409).json({ message: "this phone is not valid" });
-//   }
-// });
 
 export const signIn = catchAsync(async (req, res, next) => {
   let err_email2 = "this email  is not valid";
@@ -103,7 +80,7 @@ export const signIn = catchAsync(async (req, res, next) => {
   let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
   if (req.body.email !== "" ) {
     let { email, password } = req.body;
-    let userData = await userModel.findOne({ email });
+    let userData = await userModel.findOne({ email });    
     if (!userData) return res.status(401).json({ message: err_pass });
     const match = bcrypt.compareSync(password, userData.password);
     if (match && userData) {
@@ -119,9 +96,15 @@ export const signIn = catchAsync(async (req, res, next) => {
       );
       let lastSignIn = new Date();
       req.lastSignIn = lastSignIn;
+      await logModel.create({
+        user: userData._id,
+        action: "user_login",
+        targetModel: "User",
+        targetId: userData._id,
+      });
       return res.json({ message: "success", token, userData, lastSignIn });
     }
-    return res.status(401).json({ message: err_pass });
+      return res.status(401).json({ message: err_pass });
   } else {
     return res.status(409).json({ message: err_email2 });
   }
@@ -231,6 +214,8 @@ export const protectRoutes = catchAsync(async (req, res, next) => {
     }
   }
   req.user = user;
+    req.userId = user._id; // Attach user ID for logging purposes
+
   // let lastSignIn = new Date();
   // req.lastSignIn = lastSignIn;
   next();
