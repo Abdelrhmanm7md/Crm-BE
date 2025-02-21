@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import { type } from "os";
+import e from "express";
 
 const couponSchema = mongoose.Schema(
   {
@@ -9,11 +11,10 @@ const couponSchema = mongoose.Schema(
       required: [true, "coupon code required"],
       unique: true,
     },
-    discount: {
-      type: Number,
-      min: 0,
-      default: 0,
-      required: [true, "coupon discount required"],
+    type:{
+      type: String,
+      enum: ["both", "shipping","product"],
+      required: [true, "coupon type required"],
     },
     discountPercentage: {
       type: Number,

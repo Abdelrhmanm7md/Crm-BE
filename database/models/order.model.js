@@ -1,6 +1,7 @@
 import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import { couponModel } from "./coupon.model.js";
 
 const orderSchema = mongoose.Schema(
   {
@@ -33,6 +34,11 @@ const orderSchema = mongoose.Schema(
       ref: "customer",
       required: true,
     },
+    coupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "coupon",
+      // required: true,
+    },
     address: {
       type: String,
       required: true,
@@ -40,6 +46,11 @@ const orderSchema = mongoose.Schema(
     governorate: {
       type: String,
       required: true,
+    },
+    totalAmountBeforeDiscount: {
+      type: Number,
+      default: 0,
+      required: true,  // before apply coupon
     },
     totalAmount: {
       type: Number,
@@ -81,6 +92,10 @@ const orderSchema = mongoose.Schema(
         },
       ],
     },
+    shippingPrice: {
+      type: Number,
+      required: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -116,57 +131,73 @@ orderSchema.pre("save", async function (next) {
   next();
 });
 
-// orderSchema.pre("save", async function (next) {
-//   const Product = mongoose.model("product");
-//   const queryData = this.$locals.queryData;
-//   let err_1 = `Product with ID ${item.product} not found.`;
-//   let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-//   let err_3 = `Insufficient quantity for product: ${product.name}`
+orderSchema.pre("save", async function (next) {
+  const Product = mongoose.model("product");
+  const queryData = this.$locals.queryData;
+  let err_1 = `Product with ID ${item.product} not found.`;
+  let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
+  let err_3 = `Insufficient quantity for product: ${product.name}`
 
-//   if (queryData?.lang == "ar") {
-//     err_1 = `هذا الصنف غير موجود${item.product}!`;
-//     err_2 = `هناك مخزون (ات) غير موجود`;
-//     err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
-//   }
-//   try {
-//     for (const item of this.products) {
-//       const product = await Product.findById(item.product);
-//       if (!product) {
-//         throw new Error(`${err_1}`);
-//       }
+  if (queryData?.lang == "ar") {
+    err_1 = `هذا الصنف غير موجود${item.product}!`;
+    err_2 = `هناك مخزون (ات) غير موجود`;
+    err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+  }
+  try {
+    for (const item of this.products) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        throw new Error(`${err_1}`);
+      }
 
-//       const storeItem = product.store.find(
-//         (store) => String(store.branch._id) === String(this.branch)
-//       );
+      const storeItem = product.store.find(
+        (store) => String(store.branch._id) === String(this.branch)
+      );
 
-//       if (!storeItem) {
-//         throw new Error(
-//           `${err_2}`
-//         );
-//       }
+      if (!storeItem) {
+        throw new Error(
+          `${err_2}`
+        );
+      }
 
-//       // Check if there's enough quantity available
-//       if (storeItem.quantity < item.quantity) {
-//         throw new Error(`${err_3}`);
-//       }
+      // Check if there's enough quantity available
+      if (storeItem.quantity < item.quantity) {
+        throw new Error(`${err_3}`);
+      }
 
-//       // Deduct the quantity using updateOne to bypass product schema hooks
-//       await Product.updateOne(
-//         { _id: item.product, "store.branch": this.branch },
-//         { $inc: { "store.$.quantity": -item.quantity } }
-//       );
-//     }
+      // Deduct the quantity using updateOne to bypass product schema hooks
+      await Product.updateOne(
+        { _id: item.product, "store.branch": this.branch },
+        { $inc: { "store.$.quantity": -item.quantity } }
+      );
+    }
 
-//     next();
-//   } catch (error) {
-//     next(error);
-//   }
-// });
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 orderSchema.pre("save", async function (next) {
-  this.totalAmount = this.products.reduce((acc, product) => {
+  
+  let totalPrice = this.products.reduce((acc, product) => {
     return acc + product.price * product.quantity;
   }, 0);
+  this.totalAmountBeforeDiscount = totalPrice
+  let check = await couponModel.findById(this.coupon);
+  if(check){
+    switch (check.type) {
+      case "both":
+        this.totalAmount = totalPrice - ((totalPrice + this.shippingPrice) * (check.discountPercentage / 100))
+        break;
+        case "product":
+          this.totalAmount = totalPrice - ((totalPrice) * (check.discountPercentage / 100)) + this.shippingPrice
+          break;
+          case "shipping":
+        this.totalAmount = totalPrice - (( this.shippingPrice) * (check.discountPercentage / 100))
+        break;
+      }
+  }
   next();
 });
 
@@ -230,12 +261,31 @@ orderSchema.pre("findOneAndUpdate", async function () {
     this._update.totalAmount = this._update.products.reduce((acc, product) => {
       return acc + product.price * product.quantity;
     }, 0);
-    await orderModel.findByIdAndUpdate(
-      this._update._id,
-      { totalAmount: this._update.totalAmount },
-      { new: true }
-    );
+
+  let totalPrice = this._update.products.reduce((acc, product) => {
+    return acc + product.price * product.quantity;
+  }, 0);
+  this._update.totalAmountBeforeDiscount = totalPrice
+  let check = await couponModel.findById(this._update.coupon);
+  if(check && (this._update.orderStatus === "processing") ){
+    switch (check.type) {
+      case "both":
+        this._update.totalAmount = totalPrice - ((totalPrice + this._update.shippingPrice) * (check.discountPercentage / 100))
+        break;
+        case "product":
+          this._update.totalAmount = totalPrice - ((totalPrice) * (check.discountPercentage / 100)) + this._update.shippingPrice
+          break;
+          case "shipping":
+            this._update.totalAmount = totalPrice - (( this._update.shippingPrice) * (check.discountPercentage / 100))
+        break;
+      }
   }
+  await orderModel.findByIdAndUpdate(
+    this._update._id,
+    { totalAmount: this._update.totalAmount },
+    { new: true }
+  );
+}
 });
 
 orderSchema.pre("findOneAndUpdate", async function (next) {

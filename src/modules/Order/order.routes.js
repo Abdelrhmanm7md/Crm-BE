@@ -11,7 +11,6 @@ orderRouter.get("/shipping/:shippingId",protectRoutes, orderController.getAllOrd
 orderRouter.get("/export/",protectRoutes, orderController.exportOrder);
 orderRouter.get("/:id",protectRoutes, orderController.getOrderById);
 orderRouter.put("/:id",protectRoutes, orderController.updateOrder);
-orderRouter.put(":id/coupon/:code",protectRoutes,orderController.applyCoupon)
 orderRouter.post("/",protectRoutes, orderController.createOrder);
 orderRouter.delete("/:id",protectRoutes, orderController.deleteOrder);
 

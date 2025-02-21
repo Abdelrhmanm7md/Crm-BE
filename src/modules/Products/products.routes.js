@@ -12,6 +12,10 @@ productRouter.post(
   productController.createProduct
 );
 productRouter.get("/",protectRoutes, productController.getAllProduct);
+productRouter.get("/category/:categoryId",protectRoutes, productController.getAllProductsByCategory);
+productRouter.get("/brand/:brandId",protectRoutes, productController.getAllProductsByBrand);
+productRouter.get("/branch/:branchId",protectRoutes, productController.getAllProductsByBranch);
+productRouter.get("/supplier/:supplierId",protectRoutes, productController.getAllProductsBySupplier);
 productRouter.get("/export/", productController.exportProduct);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);

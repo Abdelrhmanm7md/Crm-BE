@@ -4,10 +4,21 @@ import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import { photoUpload, removeFile } from "../../utils/removeFiles.js";
+import { supplierModel } from "../../../database/models/supplier.model.js";
+import { branchModel } from "../../../database/models/branch.model.js";
+import { categoryModel } from "../../../database/models/category.model.js";
 
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
   req.body.createdBy = req.user._id;
+  // if (req.body.discountPercentage > 0) {
+  //   req.body.discountPrice = req.body.sellingPrice - (req.body.sellingPrice * req.body.discountPercentage) / 100;
+  // } else if (req.body.discountPrice > 0) {
+  //   req.body.discountPercentage = ((req.body.sellingPrice - req.body.discountPrice) / req.body.sellingPrice) * 100;
+  // } else {
+  //   req.body.discountPrice = req.body.sellingPrice;
+  //   req.body.discountPercentage = 0;
+  // }
   let gallery = photoUpload(req, "gallery", "products");
   let pic = photoUpload(req, "pic", "products");
   pic = pic[0].replace(`${process.env.LOCALHOST}`, "");
@@ -58,6 +69,81 @@ const exportProduct = catchAsync(async (req, res, next) => {
     selectedFields,
     specificIds
   );
+});
+const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
+  let { supplierId } = req.params;
+  let message_1 = "No Products was found!"
+  let message_2 = "Supplier not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد منتجات!"
+    message_2 = "المورد غير موجود!"
+  }
+  let check = await supplierModel.findById(supplierId);
+  if (!check) {
+    return res.status(404).json({ message: message_2 });
+  }
+  let result = await productModel.find({supplier: supplierId});
+ !result && res.status(404).json({ message: message_1 });
+
+
+  res.status(200).json({ message: "Done", result });
+});
+const getAllProductsByBrand = catchAsync(async (req, res, next) => {
+  let { brandId } = req.params;
+  let message_1 = "No Products was found!"
+  let message_2 = "brand not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد منتجات!"
+    message_2 = "الماركة غير موجود!"
+  }
+  let check = await branchModel.findById(brandId);
+  if (!check) {
+    return res.status(404).json({ message: message_2 });
+  }
+  let result = await productModel.find({brand: brandId});
+
+ !result && res.status(404).json({ message: message_1 });
+
+
+  res.status(200).json({ message: "Done", result });
+});
+const getAllProductsByBranch = catchAsync(async (req, res, next) => {
+  let { branchId } = req.params;
+  let message_1 = "No Products was found!"
+  let message_2 = "branch not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد منتجات!"
+    message_2 = "الفرع غير موجود!"
+  }
+  let check = await branchModel.findById(branchId);
+  if (!check) {
+    return res.status(404).json({ message: message_2 });
+  }
+
+  let result = await productModel.find({ "store.branch": branchId });
+ !result && res.status(404).json({ message: message_1 });
+
+  res.status(200).json({ message: "Done", result });
+});
+
+const getAllProductsByCategory = catchAsync(async (req, res, next) => {
+  let { categoryId } = req.params;
+  let message_1 = "No Products was found!"
+  let message_2 = "category not found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد منتجات!"
+    message_2 = "القسم غير موجود!"
+  }
+  let check = await categoryModel.findById(categoryId);
+  if (!check) {
+    return res.status(404).json({ message: message_2 });
+  }
+
+  let result = await productModel.find({category: categoryId});
+ !result && res.status(404).json({ message: message_1 });
+
+
+  res.status(200).json({ message: "Done", result });
 });
 
 const getProductById = catchAsync(async (req, res, next) => {
@@ -263,6 +349,10 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 export {
   createProduct,
   getAllProduct,
+  getAllProductsBySupplier,
+  getAllProductsByBrand,
+  getAllProductsByCategory,
+  getAllProductsByBranch,
   getProductById,
   deleteProduct,
   updateProduct,

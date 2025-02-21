@@ -1,4 +1,3 @@
-import { couponModel } from "../../../database/models/coupon.model.js";
 import { orderModel } from "../../../database/models/order.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
@@ -83,32 +82,6 @@ const getAllOrdersByShippingCompany = catchAsync(async (req, res, next) => {
   res.status(200).json({ message: "Done", result });
 });
 
-const applyCoupon = catchAsync(async (req, res, next) => {
-  // 1- get coupon from params
-  // 2- get coupon discount
-  // 3- calc discount
-
-  let code = await couponModel.findOne({ code: req.params.code });
-  let cart = await orderModel.findOne({ _id: req.params.id });
-  let message_1 = "Coupon not found!"
-  let message_2 = "Order not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "الكوبون غير موجود!"
-    message_2 = "الطلب غير موجود!"
-  }
-  if (!code) {
-    return res.status(404).json({ message: message_1 });
-  }
-  if (!cart) {
-    return res.status(404).json({ message: message_2 });
-  }
-if(code.discount != 0 && code.expires < new Date()){
-  cart.totalPriceAfterDiscount = cart.totalAmount - (cart.totalAmount * code.discount) / 100;
-  cart.discount = code.discount;
-}
-  await cart.save();
-  res.json({message:"Done", cart})
-})
 
 const updateOrder = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -158,5 +131,4 @@ export {
   exportOrder,
   deleteOrder,
   updateOrder,
-  applyCoupon,
 };

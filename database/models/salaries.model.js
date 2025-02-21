@@ -21,7 +21,23 @@ const salarySchema = mongoose.Schema(
   },
   { timestamps: true }
 );
-
+salarySchema.pre("save", async function (next) {
+  let check = await salaryModel.findOne({ user: this.user });
+  const queryData = this.$locals.queryData;
+  let err_1 = "Salary should be greater than 0";
+  let err_2 = "Salary for this user already exists";
+  if (queryData?.lang == "ar") {
+    err_1 = "الراتب يجب أن يكون أكبر من 0";
+    err_2 = "الراتب لهذا المستخدم موجود بالفعل";
+  }
+  if (this.salary <= 0) {
+    return next(new Error(err_1));
+  }
+  if (check) {
+    return next(new Error(err_2));
+  }
+  next();
+});
 
 salarySchema.pre("save", async function (next) {
   await logModel.create({

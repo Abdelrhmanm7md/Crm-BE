@@ -26,6 +26,11 @@ const branchSchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    capital: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -114,10 +119,15 @@ branchSchema.post("find", async function (docs) {
       { $match: { "store.branch": doc._id } }, // Match products under the branch
       { $group: { _id: "$store.branch", count: { $sum: 1 } } },
     ]);
+    const [capital] = await productModel.aggregate([
+      { $match: { "store.branch": doc._id } }, // Match products under the branch
+      { $group: { _id: "$store.branch", totalAmount: { $sum: "$totalAmount" } } },
+    ]);
 
     const updateFields = {
       collectionAmount: orderResult?.totalAmount || 0,
       productsCount: productResult?.count || 0,
+      capital: capital?.totalAmount || 0,
     };
 
     await branchModel.updateOne({ _id: doc._id }, { $set: updateFields });

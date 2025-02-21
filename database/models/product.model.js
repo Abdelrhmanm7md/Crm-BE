@@ -83,17 +83,13 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    shippingPrice: {
-      type: Number,
-      required: true,
-    },
     discountPrice: {
       type: Number,
       required: true,
       default: 0,
     },
     discountPercentage: {
-      type: String,
+      type: Number,
       required: true,
       default: 0,
     },
@@ -107,11 +103,6 @@ const productSchema = mongoose.Schema(
 );
 
 productSchema.pre("save", async function (next) {
-  this.sellingPrice = this.sellingPrice - this.discountPrice;
-  this.discountPercentage = (
-    (this.discountPrice / this.sellingPrice) *
-    100
-  ).toFixed(2);
   const queryData = this.$locals.queryData;
   let err_1 = "There are branch(s) that do not exist";
   let err_2 = "SKU is already taken";
@@ -148,24 +139,45 @@ productSchema.pre("save", async function (next) {
   }
 });
 
-productSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate();
+// productSchema.pre("findOneAndUpdate", async function (next) {
+//   const update = this.getUpdate();
 
-  if (update.sellingPrice !== undefined || update.discountPrice !== undefined) {
-    const sellingPrice = update.sellingPrice ?? this.getQuery().sellingPrice;
-    const discountPrice = update.discountPrice ?? this.getQuery().discountPrice;
+//   if (update.sellingPrice !== undefined || update.discountPrice !== undefined) {
+//     const sellingPrice = update.sellingPrice ?? this.getQuery().sellingPrice;
+//     const discountPrice = update.discountPrice ?? this.getQuery().discountPrice;
 
-    if (sellingPrice !== undefined && discountPrice !== undefined) {
-      update.sellingPrice = sellingPrice - discountPrice;
-      update.discountPercentage = (
-        (discountPrice / update.sellingPrice) *
-        100
-      ).toFixed(2);
-    }
-  }
+//     if (sellingPrice !== undefined && discountPrice !== undefined) {
+//       update.sellingPrice = sellingPrice - discountPrice;
+//       update.discountPercentage = (
+//         (discountPrice / update.sellingPrice) *
+//         100
+//       ).toFixed(2);
+//     }
+//   }
 
-  next();
-});
+//   next();
+// });
+// productSchema.pre("findOneAndUpdate", function (next) {
+//   const update = this.getUpdate();
+
+//   if (!update) return next();
+
+//   if (update.sellingPrice) {
+//     if (update.discountPercentage !== undefined) {
+//       // If discountPercentage is provided, calculate discountPrice
+//       update.discountPrice = update.sellingPrice - (update.sellingPrice * update.discountPercentage) / 100;
+//     } else if (update.discountPrice !== undefined && update.discountPrice < update.sellingPrice) {
+//       // If discountPrice is provided, calculate discountPercentage
+//       update.discountPercentage = ((update.sellingPrice - update.discountPrice) / update.sellingPrice) * 100;
+//     } else {
+//       // If no discount, reset values
+//       update.discountPrice = update.sellingPrice;
+//       update.discountPercentage = 0;
+//     }
+//   }
+
+//   next();
+// });
 
 productSchema.pre(
   /^delete/,
