@@ -1,6 +1,7 @@
 import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import { orderModel } from "./order.model.js";
 
 const supplierSchema = mongoose.Schema(
   {
@@ -30,6 +31,16 @@ const supplierSchema = mongoose.Schema(
     creditAmount: {
       type: Number,
       // required: true,
+    },
+    collectionAmount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    ordersCount: {
+      type: Number,
+      required: true,
+      default: 0,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -104,5 +115,41 @@ supplierSchema.pre(
     next();
   }
 );
+
+supplierSchema.post("find", async function (docs) {
+  if (!docs.length) return;
+
+  const supplierIds = docs.map(doc => doc._id);
+
+  const orderStats = await orderModel.aggregate([
+    { $match: { supplier: { $in: supplierIds } } },
+    {
+      $group: {
+        _id: "$supplier",
+        totalOrders: { $sum: 1 },
+        supplierOrders: {
+          $sum: 1,
+        },
+        totalAmount: { $sum: "$totalAmount" },
+      },
+    },
+  ]);
+
+  const updates = orderStats.map(stat => ({
+    updateOne: {
+      filter: { _id: stat._id },
+      update: {
+        $set: {
+          ordersCount: stat.supplierOrders || 0,
+          collectionAmount: (stat.totalAmount || 0) * (stat.totalOrders || 0),
+        },
+      },
+    },
+  }));
+
+  if (updates.length) {
+    await supplierModel.bulkWrite(updates);
+  }
+});
 
 export const supplierModel = mongoose.model("supplier", supplierSchema);

@@ -55,7 +55,7 @@ const exportShippingCompany = catchAsync(async (req, res, next) => {
 const getShippingCompanyById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let shippingCompany = await shippingCompanyModel.findById(id);
+  let shippingCompany = await shippingCompanyModel.find({ _id: id });
   let message_1 = "shipping Company not found!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم العثور على شركة الشحن"
@@ -63,9 +63,10 @@ const getShippingCompanyById = catchAsync(async (req, res, next) => {
 
  !shippingCompany && res.status(404).json({ message: message_1 });
 
-
+shippingCompany = shippingCompany[0];
   res.status(200).json({ message: "Done", shippingCompany });
 });
+
 const updateShippingCompany = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 

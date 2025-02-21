@@ -56,6 +56,32 @@ const getOrderById = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ message: "Done", result });
 });
+const getAllOrdersByStatus = catchAsync(async (req, res, next) => {
+  let { status } = req.params;
+
+  let result = await orderModel.find({orderStatus: status});
+  let message_1 = "No Order was found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد طلبات!"
+  }
+ !result && res.status(404).json({ message: message_1 });
+
+
+  res.status(200).json({ message: "Done", result });
+});
+const getAllOrdersByShippingCompany = catchAsync(async (req, res, next) => {
+  let { shippingId } = req.params;
+
+  let result = await orderModel.find({shippingCompany: shippingId});
+  let message_1 = "No Order was found!"
+  if(req.query.lang == "ar"){
+    message_1 = "لا يوجد طلبات!"
+  }
+ !result && res.status(404).json({ message: message_1 });
+
+
+  res.status(200).json({ message: "Done", result });
+});
 
 const applyCoupon = catchAsync(async (req, res, next) => {
   // 1- get coupon from params
@@ -127,6 +153,8 @@ export {
   createOrder,
   getAllOrder,
   getOrderById,
+  getAllOrdersByStatus,
+  getAllOrdersByShippingCompany,
   exportOrder,
   deleteOrder,
   updateOrder,

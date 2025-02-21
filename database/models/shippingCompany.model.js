@@ -1,6 +1,7 @@
 import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import { orderModel } from "./order.model.js";
 
 const shippingCompanySchema = mongoose.Schema(
   {
@@ -12,7 +13,7 @@ const shippingCompanySchema = mongoose.Schema(
     shippingCompanyCode: {
       type: String,
       uniqe: true,
-      required: true,
+      // required: true,
       minLength: [2, "too short shipping Company name"],
     },
     ordersCount: {
@@ -38,7 +39,7 @@ const shippingCompanySchema = mongoose.Schema(
       required: true,
       default: 0,
     },
-    expectedAmount: {
+    ordersCount: {
       type: Number,
       required: true,
       default: 0,
@@ -115,6 +116,43 @@ shippingCompanySchema.pre(
     next();
   }
 );
+
+shippingCompanySchema.post("find", async function (docs) {
+  if (!docs.length) return;
+
+  const shippingCompanyIds = docs.map(doc => doc._id);
+
+  const orderStats = await orderModel.aggregate([
+    { $match: { shippingCompany: { $in: shippingCompanyIds } } },
+    {
+      $group: {
+        _id: "$shippingCompany",
+        totalOrders: { $sum: 1 },
+        shippingOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] },
+        },
+        totalAmount: { $sum: "$totalAmount" },
+      },
+    },
+  ]);
+
+  const updates = orderStats.map(stat => ({
+    updateOne: {
+      filter: { _id: stat._id },
+      update: {
+        $set: {
+          ordersCount: stat.shippingOrders || 0,
+          collectionAmount: (stat.totalAmount || 0) * (stat.totalOrders || 0),
+        },
+      },
+    },
+  }));
+
+  if (updates.length) {
+    await shippingCompanyModel.bulkWrite(updates);
+  }
+});
+
 
 export const shippingCompanyModel = mongoose.model(
   "shippingCompany",

@@ -83,6 +83,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    shippingPrice: {
+      type: Number,
+      required: true,
+    },
     discountPrice: {
       type: Number,
       required: true,
@@ -234,9 +238,10 @@ productSchema.pre(
   }
 );
 
-// productSchema.pre(/^find/, function () {
-//   this.populate({"path":"store.branch"});
-//   this.populate("brand");
-//   this.populate("category");
-// })
+productSchema.pre(/^find/, function () {
+  this.populate({"path":"store.branch"});
+  this.populate("supplier");
+  this.populate("brand");
+  this.populate("category");
+})
 export const productModel = mongoose.model("product", productSchema);

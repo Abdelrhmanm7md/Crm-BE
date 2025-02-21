@@ -6,6 +6,8 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 
 orderRouter.get("/",protectRoutes, orderController.getAllOrder);
+orderRouter.get("/status/:status",protectRoutes, orderController.getAllOrdersByStatus);
+orderRouter.get("/shipping/:shippingId",protectRoutes, orderController.getAllOrdersByShippingCompany);
 orderRouter.get("/export/",protectRoutes, orderController.exportOrder);
 orderRouter.get("/:id",protectRoutes, orderController.getOrderById);
 orderRouter.put("/:id",protectRoutes, orderController.updateOrder);

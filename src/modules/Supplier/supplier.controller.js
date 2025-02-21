@@ -34,13 +34,13 @@ const getAllSupplier = catchAsync(async (req, res, next) => {
 const getSupplierById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let Supplier = await supplierModel.findById(id);
+  let Supplier = await supplierModel.find({_id});
   let message_1 = "No Supplier was found!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم العثور على مورد"
   }
   !Supplier && res.status(404).json({ message: message_1 });
-
+  Supplier = Supplier[0];
   res.status(200).json({ message: "Done", Supplier });
 });
 

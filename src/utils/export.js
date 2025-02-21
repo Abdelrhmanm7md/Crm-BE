@@ -77,4 +77,67 @@ const exportData = async (req, res, next, model, query = {}, projection = {}, se
 
 export default exportData;
 
+// import fs from "fs";
+// import path from "path";
+// import XLSX from "xlsx";
+
+// const exportData = async (req, res, next, model, query = {}, specificIds = []) => {
+//   try {
+//     const filePath = path.resolve("./data.xlsx");
+
+//     // Parse specificIds properly if it's a stringified array
+//     if (typeof specificIds === "string") {
+//       try {
+//         specificIds = JSON.parse(specificIds);
+//       } catch (e) {
+//         specificIds = specificIds.split(",");
+//       }
+//     }
+
+//     if (!Array.isArray(specificIds)) {
+//       specificIds = [];
+//     }
+
+//     // Apply filtering by specific IDs if provided
+//     if (specificIds.length > 0) {
+//       query._id = { $in: specificIds.map(id => id.toString()) };
+//     }
+
+//     // Fetch all documents and exclude `_id`
+//     let data = await model.find(query).select("-_id").lean();
+
+//     if (!data.length) {
+//       return res.status(404).json({ message: "No data found" });
+//     }
+
+//     // Convert JSON data to a worksheet
+//     const worksheet = XLSX.utils.json_to_sheet(data);
+
+//     // Create a new workbook
+//     const workbook = XLSX.utils.book_new();
+//     XLSX.utils.book_append_sheet(workbook, worksheet, "Exported Data");
+
+//     // Write the Excel file
+//     XLSX.writeFile(workbook, filePath);
+
+//     // Send the file as a response
+//     res.download(filePath, "data.xlsx", (err) => {
+//       if (err) {
+//         console.error("Error sending file:", err);
+//         return next(res.json({ message: "Error", err }));
+//       }
+
+//       // Remove the file after download
+//       fs.unlink(filePath, (unlinkErr) => {
+//         if (unlinkErr) console.error("Error deleting file:", unlinkErr);
+//       });
+//     });
+
+//   } catch (err) {
+//     console.error("Error exporting data:", err);
+//     return next(res.json({ message: "Error exporting data", err }));
+//   }
+// };
+
+// export default exportData;
 

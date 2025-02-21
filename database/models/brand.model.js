@@ -149,7 +149,7 @@ brandSchema.post("find", async function (docs) {
 
 brandSchema.pre(/^find/, function () {
   this.populate("categorys");
-  this.populate("brands");
+  this.populate("suppliers");
 });
 
 export const brandModel = mongoose.model("brand", brandSchema);

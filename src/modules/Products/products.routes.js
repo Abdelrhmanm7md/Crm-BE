@@ -12,7 +12,7 @@ productRouter.post(
   productController.createProduct
 );
 productRouter.get("/",protectRoutes, productController.getAllProduct);
-productRouter.get("/export/",protectRoutes, productController.exportProduct);
+productRouter.get("/export/", productController.exportProduct);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);
 productRouter.put("/:id",protectRoutes, productController.updateProduct);
