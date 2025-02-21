@@ -34,6 +34,12 @@ const shippingCompanySchema = mongoose.Schema(
         },
       ],
     },
+    phone: {
+      type: String,
+      required: [true, "Phone is a required field."],
+      minLength: [9, "phone is too short."],
+      unique: [true, "this phone number is already registered."],
+    },
     collectionAmount: {
       type: Number,
       required: true,
@@ -60,6 +66,15 @@ shippingCompanySchema.pre("save", async function (next) {
       length: 4,
       useLetters: false,
     });
+    let check = await shippingCompanyModel.findOne({ phone: this.phone });
+    const queryData = this.$locals.queryData;
+    let err_1 = "this phone number is already registered.";
+    if (queryData?.lang == "ar") {
+      err_1 = "هذا رقم الهاتف مسجل بالفعل";
+    }
+    if (check) {
+      throw new Error(err_1);
+    }
   next();
 });
 shippingCompanySchema.pre("save", async function (next) {
