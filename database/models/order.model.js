@@ -37,6 +37,7 @@ const orderSchema = mongoose.Schema(
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "coupon",
+      default: null,
       // required: true,
     },
     address: {
@@ -133,18 +134,18 @@ orderSchema.pre("save", async function (next) {
 
 orderSchema.pre("save", async function (next) {
   const Product = mongoose.model("product");
-  const queryData = this.$locals.queryData;
-  let err_1 = `Product with ID ${item.product} not found.`;
-  let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-  let err_3 = `Insufficient quantity for product: ${product.name}`
-
-  if (queryData?.lang == "ar") {
-    err_1 = `هذا الصنف غير موجود${item.product}!`;
-    err_2 = `هناك مخزون (ات) غير موجود`;
-    err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
-  }
   try {
     for (const item of this.products) {
+      const queryData = this.$locals.queryData;
+      let err_1 = `Product with ID ${item.product} not found.`;
+      let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
+      let err_3 = `Insufficient quantity for product: ${product.name}`
+    
+      if (queryData?.lang == "ar") {
+        err_1 = `هذا الصنف غير موجود${item.product}!`;
+        err_2 = `هناك مخزون (ات) غير موجود`;
+        err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+      }
       const product = await Product.findById(item.product);
       if (!product) {
         throw new Error(`${err_1}`);
@@ -184,17 +185,20 @@ orderSchema.pre("save", async function (next) {
     return acc + product.price * product.quantity;
   }, 0);
   this.totalAmountBeforeDiscount = totalPrice
-  let check = await couponModel.findById(this.coupon);
-  if(check){
+  this.totalAmount = totalPrice + this.shippingPrice
+
+  let check = await couponModel.findOne({ _id: this.coupon });
+  
+  if(check && check.isValid == true){
     switch (check.type) {
       case "both":
-        this.totalAmount = totalPrice - ((totalPrice + this.shippingPrice) * (check.discountPercentage / 100))
+        this.totalAmount =  ((totalPrice + this.shippingPrice) * (check.discountPercentage / 100))
         break;
         case "product":
-          this.totalAmount = totalPrice - ((totalPrice) * (check.discountPercentage / 100)) + this.shippingPrice
+          this.totalAmount = ((totalPrice) * (check.discountPercentage / 100)) + this.shippingPrice
           break;
           case "shipping":
-        this.totalAmount = totalPrice - (( this.shippingPrice) * (check.discountPercentage / 100))
+        this.totalAmount = totalPrice + (( this.shippingPrice) * (check.discountPercentage / 100))
         break;
       }
   }
@@ -257,26 +261,24 @@ orderSchema.pre(
 );
 
 orderSchema.pre("findOneAndUpdate", async function () {
-  if (this._update.products) {
-    this._update.totalAmount = this._update.products.reduce((acc, product) => {
-      return acc + product.price * product.quantity;
-    }, 0);
+  if (this._update.products || this._update.orderStatus === "processing") {
 
   let totalPrice = this._update.products.reduce((acc, product) => {
     return acc + product.price * product.quantity;
   }, 0);
   this._update.totalAmountBeforeDiscount = totalPrice
+  this._update.totalAmount = totalPrice + this._update.shippingPrice
   let check = await couponModel.findById(this._update.coupon);
-  if(check && (this._update.orderStatus === "processing") ){
+  if(check && check.isValid == true && (this._update.orderStatus === "processing") ){
     switch (check.type) {
       case "both":
-        this._update.totalAmount = totalPrice - ((totalPrice + this._update.shippingPrice) * (check.discountPercentage / 100))
+        this._update.totalAmount =  ((totalPrice + this._update.shippingPrice) * (check.discountPercentage / 100))
         break;
         case "product":
-          this._update.totalAmount = totalPrice - ((totalPrice) * (check.discountPercentage / 100)) + this._update.shippingPrice
+          this._update.totalAmount =  ((totalPrice) * (check.discountPercentage / 100)) + this._update.shippingPrice
           break;
           case "shipping":
-            this._update.totalAmount = totalPrice - (( this._update.shippingPrice) * (check.discountPercentage / 100))
+            this._update.totalAmount = totalPrice + (( this._update.shippingPrice) * (check.discountPercentage / 100))
         break;
       }
   }

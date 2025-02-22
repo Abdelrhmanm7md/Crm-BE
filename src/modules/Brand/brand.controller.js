@@ -22,11 +22,11 @@ const getAllBrand = catchAsync(async (req, res, next) => {
     // .sort()
     // .search()
     // .fields();
-    let message_1 = "No Brand was found!"
-    if(req.query.lang == "ar"){
-      message_1 = "لم يتم العثور على العلامة التجارية!"
-    }
- !ApiFeat && res.status(404).json({ message: message_1 });
+//     let message_1 = "No Brand was found!"
+//     if(req.query.lang == "ar"){
+//       message_1 = "لم يتم العثور على العلامة التجارية!"
+//     }
+//  !ApiFeat && res.status(404).json({ message: message_1 });
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
@@ -61,7 +61,9 @@ const getBrandById = catchAsync(async (req, res, next) => {
   if(req.query.lang == "ar"){
     message_1 = "العلامة التجارية غير موجودة!"
   }
- !Brand && res.status(404).json({ message: message_1 });
+  if (!Brand || Brand.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
 
 Brand=Brand[0]
 
@@ -72,15 +74,17 @@ const updateBrand = catchAsync(async (req, res, next) => {
 
   const updatedBrand = await brandModel.findByIdAndUpdate(id, req.body, { new: true, context: { query: req.query } });
 let message_1 = "Couldn't update! Not found!"
+let message_2 = "Brand updated successfully!"
 if(req.query.lang == "ar"){
   message_1 = "تعذر التحديث! غير موجود!"
+  message_2 = "تم تحديث العلامة التجارية بنجاح!"
 }
 
   if (!updatedBrand) {
     return res.status(404).json({ message: message_1 });
   }
 
-  res.status(200).json({ message: "Brand updated successfully!", updatedBrand });
+  res.status(200).json({ message: message_2, updatedBrand });
 });
 
 const deleteBrand = catchAsync(async (req, res, next) => {
@@ -88,8 +92,10 @@ const deleteBrand = catchAsync(async (req, res, next) => {
 
   let brand = await brandModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"
+  let message_2 = "Brand deleted successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر الحذف! غير موجود!"
+    message_2 = "تم حذف العلامة التجارية بنجاح!"
   }
   if (!brand) {
     return res.status(404).json({ message: message_1 });
@@ -98,7 +104,7 @@ const deleteBrand = catchAsync(async (req, res, next) => {
   brand.userId = req.userId;
   await brand.deleteOne();
 
-  res.status(200).json({ message: "Brand deleted successfully!" });
+  res.status(200).json({ message: message_2});
 });
 
 export {

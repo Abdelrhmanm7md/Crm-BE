@@ -50,7 +50,7 @@ categorySchema.pre("save", async function (next) {
   let err_1 = "name is already taken";
   let err_2 = "SKU is already taken";
   if (queryData?.lang == "ar") {
-    err_1 = "name is already taken";
+    err_1 = "الاسم مأخوذ بالفعل";
     err_2 = "SKU مأخوذ بالفعل";
   }
   if (check) {

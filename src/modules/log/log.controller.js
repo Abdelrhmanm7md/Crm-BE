@@ -11,7 +11,6 @@ const getAllLog = catchAsync(async (req, res, next) => {
     // .sort()
     // .search()
     // .fields();
- !ApiFeat && res.status(404).json({ message: "No Brand was found!" });
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });

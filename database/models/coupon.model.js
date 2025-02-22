@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
-import { type } from "os";
-import e from "express";
 
 const couponSchema = mongoose.Schema(
   {
@@ -26,6 +24,10 @@ const couponSchema = mongoose.Schema(
       type: Date,
       required: [true, "coupon date required"],
     },
+    isValid:{
+      type: Boolean,
+      default: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -34,6 +36,39 @@ const couponSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
+
+couponSchema.pre("save",async function (next) {
+  if (this.expires && this.expires < new Date()) {
+    this.isValid = false;
+  }
+  let check = await couponModel.findOne({ code: this.code });
+  const queryData = this.$locals.queryData;
+  let err_1 = "code is already taken";
+  if (queryData?.lang == "ar") {
+    err_1 = "الكود مأخوذ بالفعل";
+  }
+  if (check) {
+    return next(new Error(err_1));
+  }
+  next();
+});
+
+couponSchema.pre(["find", "findOne"], async function (next) {
+  const now = new Date();
+  
+  // Update isValid for expired coupons before returning results
+  await this.model.updateMany({ expires: { $lt: now } }, { isValid: false });
+
+  next();
+});
+
+couponSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  if (update.expires && new Date(update.expires) < new Date()) {
+    update.isValid = false;
+  }
+  next();
+});
 
 couponSchema.pre("save", async function (next) {
   await logModel.create({

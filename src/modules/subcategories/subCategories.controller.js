@@ -24,6 +24,13 @@ const getAllSubCategories = catchAsync(async (req, res, next) => {
 const getSubCategoryById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   let results = await subCategoryModel.findById(id);
+  let message_1 = "Sub Category not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "الفئة الفرعية غير موجودة!";
+  }
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
   res.json({ message: "Done", results });
 });
 
@@ -52,11 +59,15 @@ const updateSubCategory = catchAsync(async (req, res, next) => {
     new: true, context: { query: req.query }
   });
   let message_1 = "Couldn't update!  not found!";
+  let message_2 = "Sub Category updated successfully!";
   if (req.query.lang == "ar") {
     message_1 = "تعذر التحديث! غير موجود!";
+    message_2 = "تم تحديث الفئة الفرعية بنجاح!";
   }
-  !results && next(new AppError(message_1, 404));
-  results && res.json({ message: "Done", results });
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
+  results && res.json({ message: message_2, results });
 });
 
 const deleteSubCategory = catchAsync(async (req, res, next) => {
@@ -64,8 +75,10 @@ const deleteSubCategory = catchAsync(async (req, res, next) => {
 
   let subCategory = await subCategoryModel.findById(id);
   let message_1 = "Couldn't delete! Not found!";
+  let message_2 = "Sub Category deleted successfully!";
   if (req.query.lang == "ar") {
     message_1 = "لم يتم الحذف! غير موجود!";
+    message_2 = "تم حذف الفئة الفرعية بنجاح!";
   }
   if (!subCategory) {
     return res.status(404).json({ message: message_1 });
@@ -74,7 +87,7 @@ const deleteSubCategory = catchAsync(async (req, res, next) => {
   subCategory.userId = req.userId;
   await subCategory.deleteOne();
 
-  res.status(200).json({ message: "Sub Category deleted successfully!" });
+  res.status(200).json({ message: message_2 });
 });
 
 export {

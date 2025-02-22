@@ -11,7 +11,7 @@ const salarySchema = mongoose.Schema(
     salary: {
       type: Number,
       min : 0,
-      required: [true, "Name is a required field."],
+      required: [true, "salary is a required field."],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

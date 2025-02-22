@@ -3,37 +3,37 @@ import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
-const createCaptial = catchAsync(async (req, res, next) => {  
+const createCapital = catchAsync(async (req, res, next) => {  
     req.body.createdBy = req.user._id;
-    let newCaptial = new capitalModel(req.body);
-    let addedCaptial = await newCaptial.save({ context: { query: req.query } });
+    let newCapital = new capitalModel(req.body);
+    let addedCapital = await newCapital.save({ context: { query: req.query } });
   
     res.status(201).json({
-      message: "Captial has been created successfully!",
-      addedCaptial,
+      message: "Capital has been created successfully!",
+      addedCapital,
     });
   });
   
 
-const getAllCaptial = catchAsync(async (req, res, next) => {
+const getAllCapital = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(capitalModel.find(), req.query)
     // .pagination()
     // .filter()
     // .sort()
     // .search()
     // .fields();
-    let message_1 = "No Captial was found!"
-    if(req.query.lang == "ar"){
-      message_1 = "لم يتم العثور على عميل!"
-    }
- !ApiFeat && res.status(404).json({ message: message_1 });
+//     let message_1 = "No Capital was found!"
+//     if(req.query.lang == "ar"){
+//       message_1 = "لم يتم العثور على عميل!"
+//     }
+//  !ApiFeat && res.status(404).json({ message: message_1 });
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
 
 });
 
-const exportCaptial = catchAsync(async (req, res, next) => {
+const exportCapital = catchAsync(async (req, res, next) => {
   // Define variables before passing them
   const query = {};
   const projection = { _id: 0 };
@@ -52,45 +52,50 @@ const exportCaptial = catchAsync(async (req, res, next) => {
   );
 });
 
-const getCaptialById = catchAsync(async (req, res, next) => {
+const getCapitalById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let Captial = await capitalModel.findById(id);
-  let message_1 = "No Captial was found!"
+  let Capital = await capitalModel.findById(id);
+  let message_1 = "No Capital was found!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم العثور على عميل!"
   }
- !Captial && res.status(404).json({ message: message_1 });
+  if (!Capital || Capital.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
 
 
-  res.status(200).json({ message: "Done", Captial });
+  res.status(200).json({ message: "Done", Capital });
 });
-const updateCaptial = catchAsync(async (req, res, next) => {
+const updateCapital = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let updatedCaptial = await capitalModel.findByIdAndUpdate(id, req.body, {
+  let updatedCapital = await capitalModel.findByIdAndUpdate(id, req.body, {
     new: true, context: { query: req.query }
   });
   let message_1 = "Couldn't update!  not found!"
+  let message_2 = "Capital updated successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر التحديث! غير موجود!"
+    message_2 = "تم تحديث رأس المال بنجاح!"
   }
-  if (!updatedCaptial) {
+  if (!updatedCapital) {
     return res.status(404).json({ message: message_1});
   }
 
   res
     .status(200)
-    .json({ message: "Captial updated successfully!", updatedCaptial });
+    .json({ message: message_2, updatedCapital });
 });
-const deleteCaptial = catchAsync(async (req, res, next) => {
+const deleteCapital = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   
-  // Find the customer first
   let customer = await capitalModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"
+  let message_2 = "Capital deleted successfully!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم الحذف! غير موجود!"
+    message_2 = "تم حذف رأس المال بنجاح!"
   }
   if (!customer) {
     return res.status(404).json({ message: message_1 });
@@ -99,14 +104,14 @@ const deleteCaptial = catchAsync(async (req, res, next) => {
   customer.userId = req.userId;
   await customer.deleteOne();
 
-  res.status(200).json({ message: "Captial deleted successfully!" });
+  res.status(200).json({ message: message_2 });
 });
 
 export {
-  createCaptial,
-  getAllCaptial,
-  exportCaptial,
-  getCaptialById,
-  deleteCaptial,
-  updateCaptial,
+  createCapital,
+  getAllCapital,
+  exportCapital,
+  getCapitalById,
+  deleteCapital,
+  updateCapital,
 };

@@ -139,46 +139,6 @@ productSchema.pre("save", async function (next) {
   }
 });
 
-// productSchema.pre("findOneAndUpdate", async function (next) {
-//   const update = this.getUpdate();
-
-//   if (update.sellingPrice !== undefined || update.discountPrice !== undefined) {
-//     const sellingPrice = update.sellingPrice ?? this.getQuery().sellingPrice;
-//     const discountPrice = update.discountPrice ?? this.getQuery().discountPrice;
-
-//     if (sellingPrice !== undefined && discountPrice !== undefined) {
-//       update.sellingPrice = sellingPrice - discountPrice;
-//       update.discountPercentage = (
-//         (discountPrice / update.sellingPrice) *
-//         100
-//       ).toFixed(2);
-//     }
-//   }
-
-//   next();
-// });
-// productSchema.pre("findOneAndUpdate", function (next) {
-//   const update = this.getUpdate();
-
-//   if (!update) return next();
-
-//   if (update.sellingPrice) {
-//     if (update.discountPercentage !== undefined) {
-//       // If discountPercentage is provided, calculate discountPrice
-//       update.discountPrice = update.sellingPrice - (update.sellingPrice * update.discountPercentage) / 100;
-//     } else if (update.discountPrice !== undefined && update.discountPrice < update.sellingPrice) {
-//       // If discountPrice is provided, calculate discountPercentage
-//       update.discountPercentage = ((update.sellingPrice - update.discountPrice) / update.sellingPrice) * 100;
-//     } else {
-//       // If no discount, reset values
-//       update.discountPrice = update.sellingPrice;
-//       update.discountPercentage = 0;
-//     }
-//   }
-
-//   next();
-// });
-
 productSchema.pre(
   /^delete/,
   { document: false, query: true },

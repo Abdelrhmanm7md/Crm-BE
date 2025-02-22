@@ -37,7 +37,9 @@ const getUserById = catchAsync(async (req, res, next) => {
     message = "المستخدم غير موجود";
   }
   let results = await userModel.findById(id);
-  !results && next(new AppError(message, 404));
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: message });
+  }
   let lastSignIn = req.lastSignIn;
   results && res.json({ message: "Done", results, lastSignIn });
 });
@@ -46,12 +48,24 @@ const getUserById = catchAsync(async (req, res, next) => {
 const updateUser = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   let err = "couldn't update! not found!";
+  let message = "User updated successfully!";
   if (req.query.lang == "ar") {
     err = "لا يمكن التحديث! المستخدم غير موجود";
+    message = "تم تحديث المستخدم بنجاح!";
+  }
+  if(req.body.userType === "admin"){
+    req.body.access = {
+      create : true,
+      read : true,
+      edit : true,
+      delete : true,
+    }
   }
   let results = await userModel.findByIdAndUpdate(id,req.body,{new: true });
-  !results && res.status(404).json({ message: err });
-  results && res.json({ message: "user updated successfully", results });
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: err });
+  }
+  results && res.json({ message: message, results });
 });
 
 const exportUsers = catchAsync(async (req, res, next) => {
@@ -79,8 +93,10 @@ const deleteUser = catchAsync(async (req, res, next) => {
 
   let user = await userModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"
+  let message_2 = "User deleted successfully!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم الحذف! غير موجود!"
+    message_2 = "تم حذف المستخدم بنجاح!"
   }
   if (!user) {
     return res.status(404).json({ message: message_1 });
@@ -89,7 +105,7 @@ const deleteUser = catchAsync(async (req, res, next) => {
   user.userId = req.userId;
   await user.deleteOne();
 
-  res.status(200).json({ message: "User deleted successfully!" });
+  res.status(200).json({ message: message_2 });
 });
 
 

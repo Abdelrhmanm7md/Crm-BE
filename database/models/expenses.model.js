@@ -10,6 +10,11 @@ const expensesSchema = mongoose.Schema(
     description: {
       type: String,
     },
+    amount: {
+      type: Number,
+      min : 0,
+      required: [true, "Amount is a required field."],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -23,8 +28,8 @@ const expensesSchema = mongoose.Schema(
 expensesSchema.pre("save", async function (next) {
   await logModel.create({
     user: this.createdBy, // assuming you have a createdBy field
-    action: "create Customer",
-    targetModel: "Customer",
+    action: "create Expenses",
+    targetModel: "Expenses",
     targetId: this._id,
     after: this.toObject(),
   });
@@ -45,7 +50,7 @@ expensesSchema.pre("findOneAndUpdate", async function (next) {
     await logModel.create({
       user: actionBy, // Store the user who performed the update
       action: "update expenses",
-      targetModel: "Customer",
+      targetModel: "Expenses",
       targetId: expensesId,
       before: beforeUpdate,
       after: update, // Stores the update object only (not the full document)
@@ -65,8 +70,8 @@ expensesSchema.pre(
 
     await logModel.create({
       user: actionBy,
-      action: "delete Customer",
-      targetModel: "Customer",
+      action: "delete Expenses",
+      targetModel: "Expenses",
       targetId: this._id,
       before: this.toObject(),
     });

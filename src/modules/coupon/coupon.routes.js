@@ -10,6 +10,7 @@ couponRouter
   .get(protectRoutes,couponController.getAllCoupons)
   .post(protectRoutes, couponController.createCoupon);
 
+couponRouter.get('/valid/',protectRoutes,couponController.getCheckCoupon)
 couponRouter
   .route("/:id")
   .get(protectRoutes,couponController.getCouponById)

@@ -22,13 +22,15 @@ const getAllCategory = catchAsync(async (req, res, next) => {
     // .sort()
     // .search()
     // .fields();
-    let message_1 = "Category not found!"
-    if(req.query.lang == "ar"){
-      message_1 = "القسم غير موجود"
-    }
- !ApiFeat && res.status(404).json({ message: message_1 });
+  //   let message_1 = "Category not found!"
+  //   if(req.query.lang == "ar"){
+  //     message_1 = "القسم غير موجود"
+  //   }
 
-  let results = await ApiFeat.mongooseQuery;
+  // let results = await ApiFeat.mongooseQuery;
+  // if (!results || results.length === 0) {
+  //   return res.status(404).json({ message: message_1 });
+  // }
   res.json({ message: "Done", results });
 
 });
@@ -60,8 +62,9 @@ const getCategoryById = catchAsync(async (req, res, next) => {
   if(req.query.lang == "ar"){
     message_1 = "القسم غير موجود"
   }
- !Category && res.status(404).json({ message: message_1 });
-
+ if (!Category || Category.length === 0) {
+  return res.status(404).json({ message: message_1 });
+}
 
   res.status(200).json({ message: "Done", Category });
 });
@@ -83,22 +86,26 @@ const updateCategory = catchAsync(async (req, res, next) => {
   // const updatedCategory = await categoryModel.findByIdAndUpdate(id, update, { new: true });
   const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, { new: true, context: { query: req.query } });
   let message_1 = "Couldn't update!  not found!"
+  let message_2 = "Category updated successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر التحديث! غير موجود!"
+    message_2 = "تم تحديث القسم بنجاح!"
   }
   if (!updatedCategory) {
     return res.status(404).json({ message: message_1 });
   }
 
-  res.status(200).json({ message: "Category updated successfully!", updatedCategory });
+  res.status(200).json({ message: message_2, updatedCategory });
 });
 const deleteCategory = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   
   let category = await categoryModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"
+  let message_2 = "Category deleted successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر الحذف! غير موجود!"
+    message_2 = "تم حذف القسم بنجاح!"
   }
 
   if (!category) {
@@ -108,7 +115,7 @@ const deleteCategory = catchAsync(async (req, res, next) => {
   category.userId = req.userId;
   await category.deleteOne();
 
-  res.status(200).json({ message: "Category deleted successfully!" });
+  res.status(200).json({ message: message_2 });
 });
 
 export {

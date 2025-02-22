@@ -5,6 +5,7 @@ import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createCoupon =catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
+  req.body.expires = new Date(req.body.expires);
     let results = new couponModel(req.body);
     let added = await results.save({ context: { query: req.query } });
     res.status(201).json({ message: "added", added });
@@ -14,10 +15,10 @@ const createCoupon =catchAsync(async (req, res, next) => {
 
 const getAllCoupons = catchAsync(async (req, res, next) => {
   let apiFeature = new ApiFeature(couponModel.find(), req.query)
-    .pagination()
-    .sort()
-    .search()
-    .fields();
+    // .pagination()
+    // .sort()
+    // .search()
+    // .fields();
   let results = await apiFeature.mongooseQuery;
   res.json({ message: "Done", results });
 });
@@ -29,8 +30,34 @@ const getCouponById = catchAsync(async (req, res, next) => {
   if(req.query.lang == "ar"){
     message_1 = "الكوبون غير موجود!"
   }
-  !results && res.status(404).json({ message: message_1 });
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
     res.json({ message: "Done", results });
+});
+
+const getCheckCoupon = catchAsync(async (req, res, next) => {
+  let results = await couponModel.find({ code: req.body.code });
+  let message_1 = "Coupon not found!"
+  let message_2 = "Coupon is not valid!"
+  let message_3 = "Coupon is valid and ready to use!"
+  if(req.query.lang == "ar"){
+    message_1 = "الكوبون غير موجود!"
+    message_2 = "الكوبون غير صالح!"
+    message_3 = "الكوبون صالح وجاهز للاستخدام!"
+  }
+
+  if(results && results.length > 0){
+    results = results[0]
+    
+    if(results.isValid == false){
+      res.status(404).json({ message: message_2 });
+    }else{
+      res.json({ message: message_3 , results }); 
+    }
+}else{
+  res.status(404).json({ message: message_1 });
+}
 });
 
 const updateCoupon = catchAsync(async (req, res, next) => {
@@ -44,7 +71,9 @@ const updateCoupon = catchAsync(async (req, res, next) => {
   if(req.query.lang == "ar"){
     message_1 = "لم يتم التحديث! غير موجود!"
   }
-  !results && next(new AppError(message_1, 404));
+  if (!results || results.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
   results && res.json({ message: "Done", results });
 });
 
@@ -70,6 +99,7 @@ export {
   createCoupon,
   getAllCoupons,
   getCouponById,
+  getCheckCoupon,
   updateCoupon,
   deleteCoupon,
 };

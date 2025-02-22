@@ -21,11 +21,10 @@ const getAllBranch = catchAsync(async (req, res, next) => {
     // .sort()
     // .search()
     // .fields();
-    let message_1 = "No Branch was found!"
-    if(req.query.lang == "ar"){
-      message_1 = "لم يتم العثور على فرع!"
-    }
- !ApiFeat && res.status(404).json({ message: message_1 });
+    // let message_1 = "No Branch was found!"
+    // if(req.query.lang == "ar"){
+    //   message_1 = "لم يتم العثور على فرع!"
+    // }
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
@@ -59,7 +58,9 @@ const getBranchById = catchAsync(async (req, res, next) => {
   if(req.query.lang == "ar"){
     message_1 = "الفرع غير موجود!"
   }
- !Branch && res.status(404).json({ message: message_1 });
+  if (!Branch || Branch.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
 
 Branch=Branch[0]
   res.status(200).json({ message: "Done", Branch });
@@ -71,8 +72,10 @@ const updateBranch = catchAsync(async (req, res, next) => {
     new: true, context: { query: req.query }
   });
   let message_1 = "Couldn't update!  not found!"
+  let message_2 = "Branch updated successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر التحديث! غير موجود!"
+    message_2 = "تم تحديث الفرع بنجاح!"
   }
   if (!updatedBranch) {
     return res.status(404).json({ message: message_1 });
@@ -80,7 +83,7 @@ const updateBranch = catchAsync(async (req, res, next) => {
 
   res
     .status(200)
-    .json({ message: "Branch updated successfully!", updatedBranch });
+    .json({ message: message_2, updatedBranch });
 });
 const deleteBranch = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -88,8 +91,10 @@ const deleteBranch = catchAsync(async (req, res, next) => {
   // Find the branch first
   let branch = await branchModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"
+  let message_2 = "Branch deleted successfully!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر الحذف! غير موجود!"
+    message_2 = "تم حذف الفرع بنجاح!"
   }
   if (!branch) {
     return res.status(404).json({ message: message_1 });
@@ -99,7 +104,7 @@ const deleteBranch = catchAsync(async (req, res, next) => {
   branch.userId = req.userId;
   await branch.deleteOne();
 
-  res.status(200).json({ message: "Branch deleted successfully!" });
+  res.status(200).json({ message: message_2 });
 });
 
 export {
