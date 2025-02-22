@@ -3,6 +3,7 @@ import brandRouter from "./Brand/brand.routes.js";
 import capitalRouter from "./Capital/capital.routes.js";
 import categoryRouter from "./Category/category.routes.js";
 import customerRouter from "./Customer/customer.routes.js";
+import expensesRouter from "./expenses/expenses.routes.js";
 import notiticationRouter from "./Notification/notification.routes.js";
 import orderRouter from "./Order/order.routes.js";
 import productRouter from "./Products/products.routes.js";
@@ -33,7 +34,7 @@ export function init(app) {
   app.use("/api/v1/log", logRouter);
   app.use("/api/v1/supplier-order", supplierOrderRouter);
   app.use("/api/v1/salary", salaryRouter);
-  // app.use("/api/v1/expense", expensesRouter);
+  app.use("/api/v1/expense", expensesRouter);
   app.use("/api/v1/profit", profitRouter);
   app.use("/api/v1/capital", capitalRouter);
 
