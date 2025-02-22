@@ -12,7 +12,6 @@ import supplierOrderRouter from "./Supplier Order/supplierOrder.routes.js";
 import supplierRouter from "./Supplier/supplier.routes.js";
 import authRouter from "./auth/auth.routes.js";
 import couponRouter from "./coupon/coupon.routes.js";
-import expensesRouter from "./expenses/expenses.routes.js";
 import logRouter from "./log/log.routes.js";
 import shippingCompanyRouter from "./shipping Company/shippingCompany.routes.js";
 import subCategoryRouter from "./subcategories/subCategories.routes.js";
@@ -34,7 +33,7 @@ export function init(app) {
   app.use("/api/v1/log", logRouter);
   app.use("/api/v1/supplier-order", supplierOrderRouter);
   app.use("/api/v1/salary", salaryRouter);
-  app.use("/api/v1/expense", expensesRouter);
+  // app.use("/api/v1/expense", expensesRouter);
   app.use("/api/v1/profit", profitRouter);
   app.use("/api/v1/capital", capitalRouter);
 
