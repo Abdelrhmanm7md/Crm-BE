@@ -71,7 +71,7 @@ const updateSalary = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
   let updatedSalary = await salaryModel.findByIdAndUpdate(id, req.body, {
-    new: true, context: { query: req.query }
+    new: true,userId: req.userId, context: { query: req.query }
   });
   let message_1 = "Couldn't update!  not found!"
   let message_2 = "Salary updated successfully!"

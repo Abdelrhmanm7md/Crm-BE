@@ -161,15 +161,14 @@ orderSchema.pre("save", async function (next) {
         );
       }
 
-      // Check if there's enough quantity available
       if (storeItem.quantity < item.quantity) {
         throw new Error(`${err_3}`);
       }
 
-      // Deduct the quantity using updateOne to bypass product schema hooks
       await Product.updateOne(
         { _id: item.product, "store.branch": this.branch },
-        { $inc: { "store.$.quantity": -item.quantity } }
+        { $inc: { "store.$.quantity": -item.quantity } },
+        { userId: this.createdBy }
       );
     }
 
@@ -285,7 +284,7 @@ orderSchema.pre("findOneAndUpdate", async function () {
   await orderModel.findByIdAndUpdate(
     this._update._id,
     { totalAmount: this._update.totalAmount },
-    { new: true }
+    {new:true,userId: this.options.userId,}
   );
 }
 });
@@ -333,7 +332,8 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         // Return the quantities to branch
         await Product.updateOne(
           { _id: item.product, "store.branch": branch },
-          { $inc: { "store.$.quantity": item.quantity } }
+          { $inc: { "store.$.quantity": item.quantity } },
+          { userId: this.options.userId }
         );
       } else {
         // Deduct quantities if order is not canceled
@@ -342,7 +342,8 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         }
         await Product.updateOne(
           { _id: item.product, "store.branch": branch },
-          { $inc: { "store.$.quantity": -item.quantity } }
+          { $inc: { "store.$.quantity": -item.quantity } },
+          { userId: this.options.userId }
         );
       }
     }

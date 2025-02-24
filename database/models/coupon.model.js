@@ -56,8 +56,7 @@ couponSchema.pre("save",async function (next) {
 couponSchema.pre(["find", "findOne"], async function (next) {
   const now = new Date();
   
-  // Update isValid for expired coupons before returning results
-  await this.model.updateMany({ expires: { $lt: now } }, { isValid: false });
+  await this.model.updateMany({ expires: { $lt: now } }, { isValid: false },);
 
   next();
 });

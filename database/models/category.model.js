@@ -143,7 +143,7 @@ categorySchema.post("find", async function (docs) {
       productsGain: result?.productsGain || 0,
     };
 
-    await categoryModel.updateOne({ _id: doc._id }, { $set: updateFields });
+    await categoryModel.updateOne({ _id: doc._id }, { $set: updateFields },{new:true,userId: this.options.userId});
   }
 });
 

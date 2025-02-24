@@ -65,7 +65,7 @@ const updateCoupon = catchAsync(async (req, res, next) => {
   let { id } = req.params; // id review
   // user .... req.user._id
   let results = await couponModel.findOneAndUpdate({ _id: id }, req.body, {
-    new: true, context: { query: req.query }
+    new: true,userId: req.userId, context: { query: req.query }
   });
   let message_1 ="Couldn't update! Not found!"
   if(req.query.lang == "ar"){

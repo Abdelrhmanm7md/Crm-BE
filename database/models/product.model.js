@@ -170,6 +170,7 @@ productSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const productId = this.getQuery()._id || this.getQuery().id;
   const actionBy = this.options.userId; // ✅ Get userId from query options
+console.log(actionBy,"actionBy");
 
   if (!productId) return next();
 

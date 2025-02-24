@@ -27,7 +27,7 @@ const getAllCategory = catchAsync(async (req, res, next) => {
   //     message_1 = "القسم غير موجود"
   //   }
 
-  // let results = await ApiFeat.mongooseQuery;
+  let results = await ApiFeat.mongooseQuery;
   // if (!results || results.length === 0) {
   //   return res.status(404).json({ message: message_1 });
   // }
@@ -84,7 +84,7 @@ const updateCategory = catchAsync(async (req, res, next) => {
   // }
 
   // const updatedCategory = await categoryModel.findByIdAndUpdate(id, update, { new: true });
-  const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, { new: true, context: { query: req.query } });
+  const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, { new: true,userId: req.userId, context: { query: req.query } });
   let message_1 = "Couldn't update!  not found!"
   let message_2 = "Category updated successfully!"
   if(req.query.lang == "ar"){

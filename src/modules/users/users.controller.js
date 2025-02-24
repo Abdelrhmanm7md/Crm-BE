@@ -61,7 +61,7 @@ const updateUser = catchAsync(async (req, res, next) => {
       delete : true,
     }
   }
-  let results = await userModel.findByIdAndUpdate(id,req.body,{new: true });
+  let results = await userModel.findByIdAndUpdate(id,req.body,{new: true ,userId: req.userId, context: { query: req.query }});
   if (!results || results.length === 0) {
     return res.status(404).json({ message: err });
   }

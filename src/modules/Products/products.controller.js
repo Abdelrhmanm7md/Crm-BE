@@ -7,6 +7,9 @@ import { photoUpload, removeFile } from "../../utils/removeFiles.js";
 import { supplierModel } from "../../../database/models/supplier.model.js";
 import { branchModel } from "../../../database/models/branch.model.js";
 import { categoryModel } from "../../../database/models/category.model.js";
+import axios from "axios";
+import cron from "node-cron";
+import mongoose from "mongoose";
 
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
@@ -210,7 +213,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
   // }
 
   // const updatedProduct = await productModel.findByIdAndUpdate(id, update, {new: true,});
-  const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {new: true, context: { query: req.query }});
+  const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {new: true,userId: req.userId, context: { query: req.query }});
   let message_1 = "Couldn't update!  not found!"
   if(req.query.lang == "ar"){
     message_1 = "تعذر التحديث! غير موجود!"
@@ -356,6 +359,81 @@ const deleteProduct = catchAsync(async (req, res, next) => {
     res.status(200).json({ message: message_2 });
   });
 
+  
+  // ✅ Connect to MongoDB (Modify connection string)
+  const siteUrl = "https://yourwebsite.com"; // Replace with your actual WordPress site URL
+  const consumerKey = "ck_517a418552f69626f680fd9e9680493773c98a15";
+  const consumerSecret = "cs_31e25e3dd80963f0d80cfa4bcd68d89d9439ee48";
+  
+  const apiUrl = `${siteUrl}/wp-json/wc/v3/products`;
+  const headers = {
+      "Authorization": "Basic " + btoa(`${consumerKey}:${consumerSecret}`),
+      "Content-Type": "application/json"
+  };
+  
+  
+  // ✅ Fetch & Update Products
+  const fetchAndStoreProducts = async () => {
+    try {
+      console.log("⏳ Fetching products from WooCommerce API...");
+  
+      const { data } = await axios.get("https://a2mstore.com/wp-json/wc/v3/products", {
+        headers: {
+          "User-Agent": "YourAppName",
+          "Content-Type": "application/json",
+        },
+      });
+  
+      for (const item of data) {
+        const existingProduct = await productModel.findOne({ SKU: item.sku });
+  
+        const productData = {
+          name: item.name,
+          SKU: item.sku || `WP-${item.id}`,
+          shortDescription: item.short_description || "",
+          description: item.description || "",
+          brand: null, // Map WP brands if needed
+          colors: [],
+          attributes: item.attributes.map(attr => ({
+            name: attr.name,
+            value: attr.options.join(", "),
+          })),
+          pic: item.images.length > 0 ? item.images[0].src : undefined,
+          gallery: item.images.map(img => img.src),
+          category: null, // Map WP categories if needed
+          store: [],
+          supplier: null,
+          costPrice: 0,
+          sellingPrice: parseFloat(item.price) || 0,
+          discountPrice: parseFloat(item.sale_price) || 0,
+          discountPercentage: item.regular_price
+            ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
+            : 0,
+          createdBy: null,
+        };
+  
+        if (existingProduct) {
+          await productModel.findByIdAndUpdate(existingProduct._id, productData);
+        } else {
+          await productModel.create(productData);
+        }
+      }
+  
+      console.log("✅ Products updated successfully!");
+    } catch (error) {
+      console.error("❌ Error fetching products:", error.message);
+    }
+  };
+  
+  // ✅ Schedule the function to run every 6 hours
+  cron.schedule("0 */6 * * *", () => {
+    console.log("🔄 Running scheduled product update...");
+    fetchAndStoreProducts();
+  });
+  
+  // Call once at startup
+  fetchAndStoreProducts();
+  
 export {
   createProduct,
   getAllProduct,

@@ -130,7 +130,7 @@ branchSchema.post("find", async function (docs) {
       capital: capital?.totalAmount || 0,
     };
 
-    await branchModel.updateOne({ _id: doc._id }, { $set: updateFields });
+    await branchModel.updateOne({ _id: doc._id }, { $set: updateFields },{new:true,userId: this.options.userId});
   }
 });
 

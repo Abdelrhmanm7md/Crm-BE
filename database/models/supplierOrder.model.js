@@ -75,10 +75,7 @@ supplierOrderSchema.pre("save", async function (next) {
   this.totalAmount = this.products.reduce((acc, product) => {
     return acc + product.price * product.quantity;
   }, 0);
-  next();
-});
-
-supplierOrderSchema.pre("save", async function (next) {
+  this.remainingPayment = this.totalAmount - this.paidPayment;
   await logModel.create({
     user: this.createdBy,
     action: "create Order from Supplier || انشاء طلبية من المورد",
@@ -91,9 +88,6 @@ supplierOrderSchema.pre("save", async function (next) {
 
 supplierOrderSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
-  this._update.totalAmount = this._update.products.reduce((acc, product) => {
-    return acc + product.price * product.quantity;
-  }, 0);
   const supplierOrderId = this.getQuery()._id || this.getQuery().id;
   const actionBy = this.options.userId; // ✅ Get userId from query options
 

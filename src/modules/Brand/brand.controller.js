@@ -72,7 +72,7 @@ Brand=Brand[0]
 const updateBrand = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const updatedBrand = await brandModel.findByIdAndUpdate(id, req.body, { new: true, context: { query: req.query } });
+  const updatedBrand = await brandModel.findByIdAndUpdate(id, req.body, { new: true,userId: req.userId, context: { query: req.query } });
 let message_1 = "Couldn't update! Not found!"
 let message_2 = "Brand updated successfully!"
 if(req.query.lang == "ar"){

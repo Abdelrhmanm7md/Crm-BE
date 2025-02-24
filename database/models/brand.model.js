@@ -143,7 +143,7 @@ brandSchema.post("find", async function (docs) {
     };
 
     // Update the document efficiently
-    await brandModel.updateOne({ _id: doc._id }, { $set: updateFields });
+    await brandModel.updateOne({ _id: doc._id }, { $set: updateFields },{new:true,userId: this.options.userId,});
   }
 });
 

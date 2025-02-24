@@ -1,3 +1,4 @@
+import { productModel } from "../../../database/models/product.model.js";
 import { supplierOrderModel } from "../../../database/models/supplierOrder.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -6,7 +7,14 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
     req.body.createdBy = req.user._id;
     let newSupplierOrder = new supplierOrderModel(req.body);
     let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
-  
+    let products = req.body.products;
+    for (const item of products) {
+      await productModel.findOneAndUpdate(
+        { _id: item.product, "store.branch": item.branch },
+        { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
+        { new: true ,userId: req.userId, context: { query: req.query } }
+      );
+    }
     res.status(201).json({
       message: "SupplierOrder has been created successfully!",
       addedSupplierOrder,
@@ -49,25 +57,59 @@ const getSupplierOrderById = catchAsync(async (req, res, next) => {
   res.status(200).json({ message: "Done", SupplierOrder });
 });
 const updateSupplierOrder = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-
-  let updatedSupplierOrder = await supplierOrderModel.findByIdAndUpdate(id, req.body, {
-    new: true, context: { query: req.query }
-  });
-  let message_1 = "Couldn't update!  not found!"
-  let message_2 = "SupplierOrder updated successfully!"
-  if(req.query.lang == "ar"){
-    message_1 = "تعذر التحديث! غير موجود!"
-    message_2 = "تم تحديث طلب المورد بنجاح!"
+  let message_1 = "Couldn't update! Not found!";
+  let message_2 = "Supplier Order updated successfully!";
+  
+  if (req.query.lang === "ar") {
+    message_1 = "تعذر التحديث! غير موجود!";
+    message_2 = "تم تحديث طلب المورد بنجاح!";
   }
-  if (!updatedSupplierOrder) {
-    return res.status(404).json({ message: message_1});
-  }
+  
+  try {
+    const { products } = req.body;
+    const order = await supplierOrderModel.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: message_1 });
+    }
+    
+    // ✅ Check if products changed
+    const productsChanged = JSON.stringify(order.products) !== JSON.stringify(products);
+    
+    if (productsChanged && req.body.products ) {
+      const revertUpdates = order.products.map(item =>
+        productModel.findOneAndUpdate(
+          { _id: item.product, "store.branch": item.branch },
+          { $inc: { "store.$.quantity": -item.quantity } }, // Subtract old quantity
+          { new: true,userId: req.userId, context: { query: req.query } }
+        )
+      );
+      await Promise.all(revertUpdates);
 
-  res
-    .status(200)
-    .json({ message: message_2, updatedSupplierOrder });
+      // ✅ Step 2: Apply new quantities
+      const applyUpdates = products.map(item =>
+        productModel.findOneAndUpdate(
+          { _id: item.product, "store.branch": item.branch },
+          { $inc: { "store.$.quantity": item.quantity } }, // Add new quantity
+          { new: true,userId: req.userId, context: { query: req.query } }
+        )
+      );
+      await Promise.all(applyUpdates);
+    }
+
+    // ✅ Step 3: Update order
+    const updatedOrder = await supplierOrderModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true,userId: req.userId, context: { query: req.query } }
+    );
+
+    res.status(200).json({ message: message_2, updatedOrder });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
+
 const deleteSupplierOrder = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   
