@@ -10,6 +10,12 @@ const brandSchema = mongoose.Schema(
       required: true,
       minLength: [2, "too short brand name"],
     },
+    slug: {
+      type: String,
+      unique: [true, "name is required"],
+      // required: true,
+      minLength: [2, "too short category name"],
+    },
     SKU: {
       type: String,
       required: true,
@@ -17,7 +23,7 @@ const brandSchema = mongoose.Schema(
     categorys: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "category",
-      required: true,
+      // required: true,
     },
     suppliers: {
       type: [mongoose.Schema.Types.ObjectId],

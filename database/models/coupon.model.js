@@ -9,22 +9,31 @@ const couponSchema = mongoose.Schema(
       required: [true, "coupon code required"],
       unique: true,
     },
-    type:{
+    type: {
       type: String,
-      enum: ["both", "shipping","product"],
+      enum: ["both", "shipping", "product","percent", "fixed_cart","fixed_product"],
       required: [true, "coupon type required"],
     },
+    discount: { type: Number, required: true }, // Percentage or fixed
     discountPercentage: {
       type: Number,
       min: 0,
       default: 0,
-      required: [true, "coupon discount required"],
+      // required: [true, "coupon discount required"],
     },
     expires: {
       type: Date,
-      required: [true, "coupon date required"],
+      default: null,
+      // required: [true, "coupon date required"],
     },
-    isValid:{
+    freeShipping: { 
+      type: Boolean, default: false 
+    },
+    nominalAmount: { type: Number, default: 0 },
+    description: {
+      type: String,
+    },
+    isValid: {
       type: Boolean,
       default: true,
     },
@@ -37,7 +46,7 @@ const couponSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-couponSchema.pre("save",async function (next) {
+couponSchema.pre("save", async function (next) {
   if (this.expires && this.expires < new Date()) {
     this.isValid = false;
   }
@@ -55,8 +64,8 @@ couponSchema.pre("save",async function (next) {
 
 couponSchema.pre(["find", "findOne"], async function (next) {
   const now = new Date();
-  
-  await this.model.updateMany({ expires: { $lt: now } }, { isValid: false },);
+
+  await this.model.updateMany({ expires: { $lt: now } }, { isValid: false });
 
   next();
 });

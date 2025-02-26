@@ -6,17 +6,37 @@ const customerSchema = mongoose.Schema(
     name: {
       type: String,
       required: [true, "Name is a required field."],
-      minLength: [2, "Name is too short."],
     },
-    address: {
-      type: [String],
-      required: [true, "Address is a required field."],
-    },
+    addresses: [
+      {
+        address: { type: String, required: true },
+      },
+    ],
     phone: {
       type: String,
-      required: [true, "Phone is a required field."],
-      minLength: [9, "phone is too short."],
-      unique: [true, "this phone number is already registered."],
+      // required: [true, "Phone is a required field."],
+      // unique: [true, "this phone number is already registered."],
+    },
+    company: {
+      type: String,
+      // required: [true, "Company is a required field."],
+    },
+    postCode: {
+      type: String,
+      // required: [true, "postCode is a required field."],
+    },
+    email: {
+      type: String,
+      // required: [true, "Phone is a required field."],
+      default: null,
+    },
+    governorate: {
+      type: String,
+      required: [true, "Governorate is a required field."],
+    },
+    country: {
+      type: String,
+      required: [true, "Country is a required field."],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

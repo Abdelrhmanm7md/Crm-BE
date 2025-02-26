@@ -8,13 +8,38 @@ const shippingCompanySchema = mongoose.Schema(
     name: {
       type: String,
       required: true,
-      minLength: [2, "too short shipping Company name"],
+      // minLength: [2, "too short shipping Company name"],
+    },
+    addresses: [
+      {
+        address: { type: String, required: true },
+      },
+    ],
+    company: {
+      type: String,
+      // required: [true, "Company is a required field."],
+    },
+    postCode: {
+      type: String,
+      // required: [true, "postCode is a required field."],
+    },
+    email: {
+      type: String,
+      required: [true, "Phone is a required field."],
+      default: null,
+    },
+    governorate: {
+      type: String,
+      required: [true, "Governorate is a required field."],
+    },
+    country: {
+      type: String,
+      required: [true, "Country is a required field."],
     },
     shippingCompanyCode: {
       type: String,
       uniqe: true,
       // required: true,
-      minLength: [2, "too short shipping Company name"],
     },
     ordersCount: {
       type: Number,
@@ -25,20 +50,20 @@ const shippingCompanySchema = mongoose.Schema(
         {
           name: {
             type: String,
-            required: true,
+            // required: true,
           },
           price: {
             type: String,
-            required: true,
+            // required: true,
           },
         },
       ],
     },
     phone: {
       type: String,
-      required: [true, "Phone is a required field."],
-      minLength: [9, "phone is too short."],
-      unique: [true, "this phone number is already registered."],
+      // required: [true, "Phone is a required field."],
+      // minLength: [9, "phone is too short."],
+      // unique: [true, "this phone number is already registered."],
     },
     collectionAmount: {
       type: Number,

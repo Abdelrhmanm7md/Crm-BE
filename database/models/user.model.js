@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { logModel } from "./log.model.js";
+import { branchModel } from "./branch.model.js";
 
 const userSchema = mongoose.Schema(
   {
@@ -32,13 +33,14 @@ const userSchema = mongoose.Schema(
       type:Boolean,
       default:false,
     },
-    dateOfBirth: {
-      type: Date,
-      // required:true
-    },
     verificationCode: {
       type: String,
       // required:true
+    },
+    branch:{
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "branch",
+      // required: true,
     },
     access: {
       create: { type: Boolean, default: false },
@@ -48,8 +50,8 @@ const userSchema = mongoose.Schema(
     },
     userType: {
       type: String,
-      enum: ["storeAdmin", "admin", "operation", "financial"],
-      default: "storeAdmin",
+      enum: ["superAdmin", "admin", "operation", "financial"],
+      default: "superAdmin",
       required: true,
     },
   },
@@ -66,6 +68,7 @@ userSchema.pre("findOneAndUpdate", function () {
 });
 
 userSchema.pre("save", async function (next) {
+  this.branch = await branchModel.find()
   await logModel.create({
     user: this._id, // assuming you have a createdBy field
     action: "create User",

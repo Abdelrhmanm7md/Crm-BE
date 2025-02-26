@@ -14,16 +14,22 @@ const productSchema = mongoose.Schema(
     },
     shortDescription: {
       type: String,
-      required: true,
+      // required: true,
     },
     description: {
       type: String,
       required: true,
     },
-    brand: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "brand",
-      required: true,
+    brand: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "brand",
+      }
+    ],
+    category: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "category",
+      // required: true,
     },
     colors: {
       type: [String],
@@ -52,11 +58,6 @@ const productSchema = mongoose.Schema(
       type: [String],
       default: [],
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "category",
-      required: true,
-    },
     store: [
       {
         branch: {
@@ -73,7 +74,8 @@ const productSchema = mongoose.Schema(
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "supplier",
-      required: true,
+      default:null,
+      // required: true,
     },
     costPrice: {
       type: Number,
@@ -96,7 +98,7 @@ const productSchema = mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
-      required: true,
+      // required: true,
     },
   },
   { timestamps: true }
@@ -170,7 +172,6 @@ productSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const productId = this.getQuery()._id || this.getQuery().id;
   const actionBy = this.options.userId; // ✅ Get userId from query options
-console.log(actionBy,"actionBy");
 
   if (!productId) return next();
 

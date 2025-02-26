@@ -1,4 +1,3 @@
-import { query } from "express";
 import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
@@ -7,9 +6,12 @@ import { photoUpload, removeFile } from "../../utils/removeFiles.js";
 import { supplierModel } from "../../../database/models/supplier.model.js";
 import { branchModel } from "../../../database/models/branch.model.js";
 import { categoryModel } from "../../../database/models/category.model.js";
+import { brandModel } from "../../../database/models/brand.model.js";
 import axios from "axios";
 import cron from "node-cron";
 import mongoose from "mongoose";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
@@ -75,52 +77,50 @@ const exportProduct = catchAsync(async (req, res, next) => {
 });
 const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
   let { supplierId } = req.params;
-  let message_1 = "No Products was found!"
-  let message_2 = "Supplier not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "لا يوجد منتجات!"
-    message_2 = "المورد غير موجود!"
+  let message_1 = "No Products was found!";
+  let message_2 = "Supplier not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "لا يوجد منتجات!";
+    message_2 = "المورد غير موجود!";
   }
   let check = await supplierModel.findById(supplierId);
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  let result = await productModel.find({supplier: supplierId});
+  let result = await productModel.find({ supplier: supplierId });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
-
 
   res.status(200).json({ message: "Done", result });
 });
 const getAllProductsByBrand = catchAsync(async (req, res, next) => {
   let { brandId } = req.params;
-  let message_1 = "No Products was found!"
-  let message_2 = "brand not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "لا يوجد منتجات!"
-    message_2 = "الماركة غير موجود!"
+  let message_1 = "No Products was found!";
+  let message_2 = "brand not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "لا يوجد منتجات!";
+    message_2 = "الماركة غير موجود!";
   }
   let check = await branchModel.findById(brandId);
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  let result = await productModel.find({brand: brandId});
+  let result = await productModel.find({ brand: brandId });
 
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
-  };
-
+  }
 
   res.status(200).json({ message: "Done", result });
 });
 const getAllProductsByBranch = catchAsync(async (req, res, next) => {
   let { branchId } = req.params;
-  let message_1 = "No Products was found!"
-  let message_2 = "branch not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "لا يوجد منتجات!"
-    message_2 = "الفرع غير موجود!"
+  let message_1 = "No Products was found!";
+  let message_2 = "branch not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "لا يوجد منتجات!";
+    message_2 = "الفرع غير موجود!";
   }
   let check = await branchModel.findById(branchId);
   if (!check) {
@@ -137,22 +137,21 @@ const getAllProductsByBranch = catchAsync(async (req, res, next) => {
 
 const getAllProductsByCategory = catchAsync(async (req, res, next) => {
   let { categoryId } = req.params;
-  let message_1 = "No Products was found!"
-  let message_2 = "category not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "لا يوجد منتجات!"
-    message_2 = "القسم غير موجود!"
+  let message_1 = "No Products was found!";
+  let message_2 = "category not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "لا يوجد منتجات!";
+    message_2 = "القسم غير موجود!";
   }
   let check = await categoryModel.findById(categoryId);
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
 
-  let result = await productModel.find({category: categoryId});
+  let result = await productModel.find({ category: categoryId });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
-
 
   res.status(200).json({ message: "Done", result });
 });
@@ -161,9 +160,9 @@ const getProductById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
   let Product = await productModel.findById(id);
-  let message_1 = "Product not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "المنتج غير موجود"
+  let message_1 = "Product not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "المنتج غير موجود";
   }
   if (!Product) {
     return res.status(404).json({ message: message_1 });
@@ -213,15 +212,17 @@ const updateProduct = catchAsync(async (req, res, next) => {
   // }
 
   // const updatedProduct = await productModel.findByIdAndUpdate(id, update, {new: true,});
-  const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {new: true,userId: req.userId, context: { query: req.query }});
-  let message_1 = "Couldn't update!  not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "تعذر التحديث! غير موجود!"
+  const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {
+    new: true,
+    userId: req.userId,
+    context: { query: req.query },
+  });
+  let message_1 = "Couldn't update!  not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "تعذر التحديث! غير موجود!";
   }
   if (!updatedProduct) {
-    return res
-      .status(404)
-      .json({ message: message_1 });
+    return res.status(404).json({ message: message_1 });
   }
 
   res
@@ -340,100 +341,147 @@ const updatePhotos = catchAsync(async (req, res, next) => {
 });
 
 const deleteProduct = catchAsync(async (req, res, next) => {
-    let { id } = req.params;
-  
-    let product = await productModel.findById(id);
-    let message_1 = "Couldn't delete! Not found!"
-    let message_2 = "Product deleted successfully!"
-    if(req.query.lang == "ar"){
-      message_1 = "لم يتم الحذف! غير موجود!"
-      message_2 = "تم حذف المنتج بنجاح!"
-    }
-    if (!product) {
-      return res.status(404).json({ message: message_1 });
-    }
-  
-    product.userId = req.userId;
-    await product.deleteOne();
-  
-    res.status(200).json({ message: message_2 });
-  });
+  let { id } = req.params;
 
-  
-  // ✅ Connect to MongoDB (Modify connection string)
-  const siteUrl = "https://yourwebsite.com"; // Replace with your actual WordPress site URL
-  const consumerKey = "ck_517a418552f69626f680fd9e9680493773c98a15";
-  const consumerSecret = "cs_31e25e3dd80963f0d80cfa4bcd68d89d9439ee48";
-  
-  const apiUrl = `${siteUrl}/wp-json/wc/v3/products`;
-  const headers = {
-      "Authorization": "Basic " + btoa(`${consumerKey}:${consumerSecret}`),
-      "Content-Type": "application/json"
-  };
-  
-  
-  // ✅ Fetch & Update Products
-  const fetchAndStoreProducts = async () => {
-    try {
-      console.log("⏳ Fetching products from WooCommerce API...");
-  
-      const { data } = await axios.get("https://a2mstore.com/wp-json/wc/v3/products", {
+  let product = await productModel.findById(id);
+  let message_1 = "Couldn't delete! Not found!";
+  let message_2 = "Product deleted successfully!";
+  if (req.query.lang == "ar") {
+    message_1 = "لم يتم الحذف! غير موجود!";
+    message_2 = "تم حذف المنتج بنجاح!";
+  }
+  if (!product) {
+    return res.status(404).json({ message: message_1 });
+  }
+
+  product.userId = req.userId;
+  await product.deleteOne();
+
+  res.status(200).json({ message: message_2 });
+});
+
+// ✅ Fetch & Update Products
+const fetchAndStoreProducts = async () => {
+  try {
+    console.log("⏳ Fetching products from WooCommerce API...");
+    const { data } = await axios.get(
+      "https://a2mstore.com/wp-json/wc/v3/products",
+      {
+        auth: {
+          username: process.env.CONSUMERKEY,
+          password: process.env.CONSUMERSECRET,
+        },
         headers: {
-          "User-Agent": "YourAppName",
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+            ).toString("base64"),
           "Content-Type": "application/json",
         },
-      });
-  
-      for (const item of data) {
-        const existingProduct = await productModel.findOne({ SKU: item.sku });
-  
-        const productData = {
-          name: item.name,
-          SKU: item.sku || `WP-${item.id}`,
-          shortDescription: item.short_description || "",
-          description: item.description || "",
-          brand: null, // Map WP brands if needed
-          colors: [],
-          attributes: item.attributes.map(attr => ({
-            name: attr.name,
-            value: attr.options.join(", "),
-          })),
-          pic: item.images.length > 0 ? item.images[0].src : undefined,
-          gallery: item.images.map(img => img.src),
-          category: null, // Map WP categories if needed
-          store: [],
-          supplier: null,
-          costPrice: 0,
-          sellingPrice: parseFloat(item.price) || 0,
-          discountPrice: parseFloat(item.sale_price) || 0,
-          discountPercentage: item.regular_price
-            ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
-            : 0,
-          createdBy: null,
-        };
-  
-        if (existingProduct) {
-          await productModel.findByIdAndUpdate(existingProduct._id, productData);
-        } else {
-          await productModel.create(productData);
-        }
       }
-  
-      console.log("✅ Products updated successfully!");
-    } catch (error) {
-      console.error("❌ Error fetching products:", error.message);
+    );
+
+    for (const item of data) {
+      const productSKU = item.sku ? item.sku.toLowerCase() : `WP-${item.id}`;
+
+      const categoryIds = await Promise.all(
+        item.categories.map(async (cat) => {
+          const existingCategory = await categoryModel.findOneAndUpdate(
+            { name: cat.name }, // Find by name
+            {
+              $setOnInsert: {
+                slug: cat.slug,
+                createdBy: `${process.env.WEBSITEADMIN}`,
+                SKU: `WP-${cat.id}`,
+              },
+            },
+            { new: true, upsert: true } // Create if not found
+          );
+          return existingCategory._id;
+        })
+      );
+
+      const brandIds = await Promise.all(
+        item.brands.map(async (brand) => {
+          const existingBrand = await brandModel.findOneAndUpdate(
+            { name: brand.name }, // Find by name
+            {
+              $setOnInsert: {
+                slug: brand.slug,
+                createdBy: `${process.env.WEBSITEADMIN}`,
+                SKU: `WP-${brand.id}`,
+              },
+            },
+            { new: true, upsert: true } // Create if not found
+          );
+          return existingBrand._id;
+        })
+      );
+
+      const existingProduct = await productModel.findOne({ SKU: productSKU });
+
+      // 🔹 Product Data
+      const productData = {
+        name: item.name,
+        SKU: productSKU,
+        shortDescription: item.short_description || "",
+        description: item.description || "",
+        brand: brandIds,
+        category: categoryIds,
+        attributes: item.attributes.map((attr) => ({
+          name: attr.name,
+          value: attr.options.join(", "),
+        })),
+        pic: item.images.length > 0 ? item.images[0].src : undefined,
+        gallery: item.images.map((img) => img.src),
+        store: [
+          {
+            branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+            quantity:
+              item.stock_status === "instock" &&
+              typeof item.stock_quantity === "number"
+                ? item.stock_quantity
+                : 0,
+          },
+        ],
+        createdBy: `${process.env.WEBSITEADMIN}`,
+        costPrice: 0,
+        sellingPrice: parseFloat(item.price) || 0,
+        discountPrice: parseFloat(item.sale_price) || 0,
+        discountPercentage: item.regular_price
+          ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
+          : 0,
+      };
+
+      // 🔹 Update Product if Exists, Else Create
+      if (existingProduct) {
+        await productModel.findByIdAndUpdate(existingProduct._id, productData, {
+          userId: `${process.env.WEBSITEADMIN}`,
+          context: { query: {} },
+        });
+        console.log(`✅ Updated Product: ${item.name}`);
+      } else {
+        await productModel.create(productData);
+        console.log(`✅ Created Product: ${item.name}`);
+      }
     }
-  };
-  
-  // ✅ Schedule the function to run every 6 hours
-  cron.schedule("0 */6 * * *", () => {
-    console.log("🔄 Running scheduled product update...");
-    fetchAndStoreProducts();
-  });
-  
-  // Call once at startup
+
+    console.log("✅ Products updated successfully!");
+  } catch (error) {
+    console.error("❌ Error fetching products:", error.message);
+  }
+};
+
+// ✅ Schedule the function to run every 6 hours
+cron.schedule("0 */6 * * *", () => {
+  console.log("🔄 Running scheduled product update...");
   fetchAndStoreProducts();
-  
+});
+
+// Call once at startup
+fetchAndStoreProducts();
+
 export {
   createProduct,
   getAllProduct,

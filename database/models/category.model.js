@@ -8,16 +8,20 @@ const categorySchema = mongoose.Schema(
       type: String,
       unique: [true, "name is required"],
       required: true,
-      minLength: [2, "too short category name"],
+    },
+    slug: {
+      type: String,
+      unique: [true, "name is required"],
+      // required: true,
     },
     SKU: {
       type: String,
-      required: true,
+      // required: true,
     },
     suppliers: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "supplier",
-      required: true,
+      // required: true,
     },
     productsCount: {
       type: Number,

@@ -17,12 +17,12 @@ const orderSchema = mongoose.Schema(
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "supplier",
-      required: true,
+      // required: true,
     },
     shippingCompany: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "shippingCompany",
-      required: true,
+      // required: true,
     },
     branch: {
       type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +33,10 @@ const orderSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "customer",
       required: true,
+    },
+    customerNotes: {
+      type: String,
+      // required: true,
     },
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,14 +66,15 @@ const orderSchema = mongoose.Schema(
       enum: [
         "pending",
         "shipping",
-        "canceled",
-        "failed",
+        "auto-draft",
+        "pending",
         "processing",
-        "onHold",
+        "on-hold",
         "completed",
+        "cancelled",
         "refunded",
-        "draft",
-        "returned",
+        "failed",
+        "checkout-draft"
       ],
       default: "processing",
       required: true,
@@ -95,6 +100,7 @@ const orderSchema = mongoose.Schema(
     },
     shippingPrice: {
       type: Number,
+      default:0,
       required: true,
     },
     createdBy: {
@@ -132,51 +138,47 @@ orderSchema.pre("save", async function (next) {
   next();
 });
 
-orderSchema.pre("save", async function (next) {
-  const Product = mongoose.model("product");
-  try {
-    for (const item of this.products) {
-      const queryData = this.$locals.queryData;
-      let err_1 = `Product with ID ${item.product} not found.`;
-      let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-      let err_3 = `Insufficient quantity for product: ${product.name}`
-    
-      if (queryData?.lang == "ar") {
-        err_1 = `هذا الصنف غير موجود${item.product}!`;
-        err_2 = `هناك مخزون (ات) غير موجود`;
-        err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
-      }
-      const product = await Product.findById(item.product);
-      if (!product) {
-        throw new Error(`${err_1}`);
-      }
+// orderSchema.pre("save", async function (next) {
+//   const Product = mongoose.model("product");
+//   try {
+//     for (const item of this.products) {
+//       const queryData = this.$locals.queryData;
+//       let err_1 = `Product with ID ${item.product} not found.`;
+//       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
+//       let err_3 = `Insufficient quantity for product: ${product.name}`
+//       console.log(queryData,"queryData2");
 
-      const storeItem = product.store.find(
-        (store) => String(store.branch._id) === String(this.branch)
-      );
+//       if (queryData?.lang == "ar") {
+//         err_1 = `هذا الصنف غير موجود${item.product}!`;
+//         err_2 = `هناك مخزون (ات) غير موجود`;
+//         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+//       }
+//       const product = await Product.findById(item.product);
+//       if (!product) {
+//         throw new Error(`${err_1}`);
+//       }
 
-      if (!storeItem) {
-        throw new Error(
-          `${err_2}`
-        );
-      }
+//       const storeItem = product.store.find(
+//         (store) => String(store.branch._id) === String(this.branch)
+//       );
 
-      if (storeItem.quantity < item.quantity) {
-        throw new Error(`${err_3}`);
-      }
+//       if (!storeItem) {
+//         throw new Error(
+//           `${err_2}`
+//         );
+//       }
 
-      await Product.updateOne(
-        { _id: item.product, "store.branch": this.branch },
-        { $inc: { "store.$.quantity": -item.quantity } },
-        { userId: this.createdBy }
-      );
-    }
+//       if (storeItem.quantity < item.quantity) {
+//         throw new Error(`${err_3}`);
+//       }
 
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+//     }
+
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 orderSchema.pre("save", async function (next) {
   
@@ -218,7 +220,7 @@ orderSchema.pre("save", async function (next) {
 orderSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const orderId = this.getQuery()._id || this.getQuery().id;
-  const actionBy = this.options.userId; // ✅ Get userId from query options
+  const actionBy = this.options?.userId; // ✅ Get userId from query options
 
   if (!orderId) return next();
 
@@ -289,69 +291,105 @@ orderSchema.pre("findOneAndUpdate", async function () {
 }
 });
 
+// orderSchema.pre("findOneAndUpdate", async function (next) {
+//   const Product = mongoose.model("product");
+//   const queryData = this.$locals.queryData;
+//   const update = this.getUpdate();
+//   const { products, branch, orderStatus } = update;
+  
+//   if (!products || !branch || !orderStatus) {
+//     return next();
+//   }
+//   console.log(queryData,"queryData1");
+  
+//   try {
+//     for (const item of products) {
+//       let err_1 = `Product with ID ${item.product} not found.`;
+//       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
+//       let err_3 = `Insufficient quantity for product: ${product.name}`
+    
+//       if (queryData?.lang == "ar") {
+//         err_1 = `هذا الصنف غير موجود${item.product}!`;
+//         err_2 = `هناك مخزون (ات) غير موجود`;
+//         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+//       }
+//       const product = await Product.findById(item.product);
+//       if (!product) {
+//         throw new Error(`${err_1}`);
+//       }
+
+//       const storeItem = product.store.find(
+//         (store) => String(store.branch._id) === String(branch)
+//       );
+//       if (!storeItem) {
+//         throw new Error(
+//           `${err_2}`
+//         );
+//       }
+
+//       if (
+//         orderStatus === "canceled" ||
+//         orderStatus === "failed" ||
+//         orderStatus === "returned"
+//       ) {
+//         // Return the quantities to branch
+//         await Product.updateOne(
+//           { _id: item.product, "store.branch": branch },
+//           { $inc: { "store.$.quantity": item.quantity } },
+//           { userId: this.options.userId }
+//         );
+//       } else {
+//         // Deduct quantities if order is not canceled
+//         if (storeItem.quantity < item.quantity) {
+//           throw new Error(`${err_3}`);
+//         }
+//         await Product.updateOne(
+//           { _id: item.product, "store.branch": branch },
+//           { $inc: { "store.$.quantity": -item.quantity } },
+//           { userId: this.options.userId }
+//         );
+//       }
+//     }
+
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+
 orderSchema.pre("findOneAndUpdate", async function (next) {
-  const Product = mongoose.model("product");
-  const queryData = this.$locals.queryData;
-  let err_1 = `Product with ID ${item.product} not found.`;
-  let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-  let err_3 = `Insufficient quantity for product: ${product.name}`
-
-  if (queryData?.lang == "ar") {
-    err_1 = `هذا الصنف غير موجود${item.product}!`;
-    err_2 = `هناك مخزون (ات) غير موجود`;
-    err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
-  }
   const update = this.getUpdate();
-  const { products, branch, orderStatus } = update;
+  if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
 
-  if (!products || !branch || !orderStatus) {
-    return next();
-  }
+  const order = await this.model.findOne(this.getQuery()).lean();
+  if (!order) return next();
 
-  try {
-    for (const item of products) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        throw new Error(`${err_1}`);
-      }
+  const wasAlreadyProcessed = ["shipping", "completed"].includes(order.orderStatus);
+  const willProcessNow = ["shipping", "completed"].includes(update.orderStatus);
 
-      const storeItem = product.store.find(
-        (store) => String(store.branch._id) === String(branch)
+  if (!wasAlreadyProcessed && willProcessNow) {
+    for (const item of order.products) {
+      const product = await mongoose.model("product").findById(item.productId);
+      if (product) {
+        product.store.forEach(storeItem => {
+          if (storeItem.branch.toString() === item.branchId.toString()) {
+            if (storeItem.quantity >= item.quantity) {
+              storeItem.quantity -= item.quantity;
+            } else {
+              throw new Error(`Not enough stock for product ${product.name}`);
+            }
+          }
+        });
+              await product.updateOne(
+        { _id: item.product, "store.branch": this.branch },
+        { $inc: { "store.$.quantity": -item.quantity } },
+        { userId: this.options.userId }
       );
-      if (!storeItem) {
-        throw new Error(
-          `${err_2}`
-        );
-      }
-
-      if (
-        orderStatus === "canceled" ||
-        orderStatus === "failed" ||
-        orderStatus === "returned"
-      ) {
-        // Return the quantities to branch
-        await Product.updateOne(
-          { _id: item.product, "store.branch": branch },
-          { $inc: { "store.$.quantity": item.quantity } },
-          { userId: this.options.userId }
-        );
-      } else {
-        // Deduct quantities if order is not canceled
-        if (storeItem.quantity < item.quantity) {
-          throw new Error(`${err_3}`);
-        }
-        await Product.updateOne(
-          { _id: item.product, "store.branch": branch },
-          { $inc: { "store.$.quantity": -item.quantity } },
-          { userId: this.options.userId }
-        );
       }
     }
-
-    next();
-  } catch (error) {
-    next(error);
   }
+
+  next();
 });
 
 orderSchema.pre(/^find/, function () {
