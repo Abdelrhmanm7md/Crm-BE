@@ -48,7 +48,6 @@ export const signUp = catchAsync(async (req, res, next) => {
       edit : true,
       delete : true,
     }
-    req.body.isVirfied = true
   }
 
   let results = new userModel(req.body);
@@ -177,11 +176,11 @@ export const protectRoutes = catchAsync(async (req, res, next) => {
         return next(new AppError(`${err_3}`, 401));
       }
     }
+    req.user = user;
+      req.userId = user._id; // Attach user ID for logging purposes
   }catch(err){
     return next(new AppError(`${err_3}`, 401));
   }
-  req.user = user;
-    req.userId = user._id; // Attach user ID for logging purposes
 
   // let lastSignIn = new Date();
   // req.lastSignIn = lastSignIn;

@@ -29,10 +29,6 @@ const userSchema = mongoose.Schema(
       minLength: [8, "password is too short , min length 8."],
       unique: [true, "Password must be unique."],
     },
-    isVirfied:{
-      type:Boolean,
-      default:false,
-    },
     branch:{
       type: [mongoose.Schema.Types.ObjectId],
       ref: "branch",
