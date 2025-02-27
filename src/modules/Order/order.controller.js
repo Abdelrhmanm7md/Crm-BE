@@ -291,8 +291,6 @@ const fetchAndStoreOrders = async () => {
         customer: customerId,
         customerNotes: item.customer_note,
         coupon: couponId,
-        // coupon: item.coupon_lines,
-        // coupon: item.coupon_lines== [] ? null : item.coupon_lines,
 
         address: item.shipping.address_1 || "Unknown Address",
         governorate: item.shipping.state || "Unknown",

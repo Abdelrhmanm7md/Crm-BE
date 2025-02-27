@@ -47,7 +47,7 @@ const couponSchema = mongoose.Schema(
 );
 
 couponSchema.pre("save", async function (next) {
-  if (this.expires && this.expires < new Date()) {
+  if (this.expires && this.expires < new Date() && this.expires != null) {
     this.isValid = false;
   }
   let check = await couponModel.findOne({ code: this.code });
