@@ -349,7 +349,7 @@ const fetchAndStoreOrders = async () => {
 };
 
 // Run the function
-// fetchAndStoreOrders();
+fetchAndStoreOrders();
 
 cron.schedule("0 */6 * * *", () => {
   console.log("🔄 Running scheduled product update...");

@@ -480,7 +480,7 @@ cron.schedule("0 */6 * * *", () => {
 });
 
 // Call once at startup
-// fetchAndStoreProducts();
+fetchAndStoreProducts();
 
 export {
   createProduct,
