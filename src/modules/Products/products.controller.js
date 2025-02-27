@@ -42,8 +42,7 @@ const createProduct = catchAsync(async (req, res, next) => {
 });
 
 const getAllProduct = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(productModel.find(), req.query);
-  // .pagination()
+  let ApiFeat = new ApiFeature(productModel.find(), req.query).pagination()
   // .filter()
   // .sort()
   // .search()
@@ -55,7 +54,7 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   // !ApiFeat && res.status(404).json({ message: message_1 });
 
   let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done", results });
+  res.json({ message: "Done",page: ApiFeat.page, results });
 });
 const exportProduct = catchAsync(async (req, res, next) => {
   // Define variables before passing them

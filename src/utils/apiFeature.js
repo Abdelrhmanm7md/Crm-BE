@@ -7,9 +7,9 @@ export default class ApiFeature {
   pagination() {
     let page = this.queryStr.page || 1;
     if (this.queryStr.page < 1) page = 1;
-    let skip = (page - 1) * 10;
+    let skip = (page - 1) * 15;
     this.page = page;
-    this.mongooseQuery.skip(skip).limit(10);
+    this.mongooseQuery.skip(skip).limit(15);
     return this;
   }
   sort() {

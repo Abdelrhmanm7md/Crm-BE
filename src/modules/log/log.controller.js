@@ -3,20 +3,16 @@ import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
-
 const getAllLog = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(logModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
+  let ApiFeat = new ApiFeature(logModel.find(), req.query).pagination();
+  // .filter()
+  // .sort()
+  // .search()
+  // .fields();
 
   let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done", results });
-
+  res.json({ message: "Done",page: ApiFeat.page, results ,});
 });
-
 
 const exportBrand = catchAsync(async (req, res, next) => {
   // Define variables before passing them
@@ -37,9 +33,4 @@ const exportBrand = catchAsync(async (req, res, next) => {
   );
 });
 
-
-
-export {
-  getAllLog,
-  exportBrand,
-};
+export { getAllLog, exportBrand };
