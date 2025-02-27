@@ -38,10 +38,6 @@ export const signUp = catchAsync(async (req, res, next) => {
     return res.status(409).json({ message: err_email2 });
   }
 
-  req.body.verificationCode = generateUniqueId({
-    length: 4,
-    useLetters: false,
-  });
   if (req.body.password.length < 8) {
     return res.status(409).json({ message: err_pass });
   }
@@ -52,12 +48,16 @@ export const signUp = catchAsync(async (req, res, next) => {
       edit : true,
       delete : true,
     }
+    req.body.isVirfied = true
   }
 
   let results = new userModel(req.body);
   let token = jwt.sign(
-    { name: results.name, userId: results._id },
-    process.env.JWT_SECRET_KEY
+    { name: userData.name, userId: userData._id },
+    process.env.JWT_SECRET_KEY ,
+    {
+      expiresIn: process.env.JWT_TOKEN_EXPIRES_IN,
+    }
   );
   text = text + `${results.verificationCode}`;
   results.password = bcrypt.hashSync(results.password, Number(process.env.SALTED_VALUE));
@@ -70,12 +70,9 @@ export const signUp = catchAsync(async (req, res, next) => {
 export const signIn = catchAsync(async (req, res, next) => {
   let err_email2 = "this email  is not valid";
   let err_pass = "worng email or password";
-  let text = `Email Verification Code: `;
   if (req.query.lang == "ar") {
     err_email2 = "هذا البريد الالكتروني غير صحيح";
     err_pass = "البريد الالكتروني او كلمة المرور غير صحيحة";
-    err_admin = "انت ادمن اذهب الى صفحة تسجيل الدخول لادمن";
-    text = ` : رمز التحقق من البريد الالكتروني: `;
   }
   let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
   if (req.body.email !== "" ) {
@@ -84,15 +81,14 @@ export const signIn = catchAsync(async (req, res, next) => {
     if (!userData) return res.status(401).json({ message: err_pass });
     const match = bcrypt.compareSync(password, userData.password);
     if (match && userData) {
-      userData.verificationCode = generateUniqueId({
-        length: 4,
-        useLetters: false,
-      });
-      text = text + `${userData.verificationCode}`;
+
       await userData.save();
       let token = jwt.sign(
         { name: userData.name, userId: userData._id },
-        process.env.JWT_SECRET_KEY
+        process.env.JWT_SECRET_KEY ,
+        {
+          expiresIn: process.env.JWT_TOKEN_EXPIRES_IN,
+        }
       );
       let lastSignIn = new Date();
       req.lastSignIn = lastSignIn;
@@ -105,40 +101,6 @@ export const signIn = catchAsync(async (req, res, next) => {
       return res.json({ message: "success", token, userData, lastSignIn });
     }
       return res.status(401).json({ message: err_pass });
-  } else {
-    return res.status(409).json({ message: err_email2 });
-  }
-});
-export const adminSignIn = catchAsync(async (req, res, next) => {
-  let err_email2 = "this email  is not valid";
-  let err_pass = "worng email or password";
-  let err_admin = "unoauthorized";
-  let text = `Email Verification Code: `;
-  if (req.query.lang == "ar") {
-    err_email2 = "هذا البريد الالكتروني غير صحيح";
-    err_pass = "البريد الالكتروني او كلمة المرور غير صحيحة";
-    err_admin = "غير مصرح";
-    text = ` : رمز التحقق من البريد الالكتروني: `;
-  }
-  let emailFormat = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
-  if (req.body.email !== "" && req.body.email.match(emailFormat)) {
-    let { email, password } = req.body;
-    let userData = await userModel.findOne({ email });
-    if (!userData) return res.status(401).json({ message: err_pass });
-    const match = bcrypt.compareSync(password, userData.password);
-    if (match && userData) {
-      if (userData.userType !== "admin") {
-        return res.status(401).json({ message: err_admin });
-      }
-      let token = jwt.sign(
-        { name: userData.name, userId: userData._id },
-        process.env.JWT_SECRET_KEY
-      );
-      let lastSignIn = new Date();
-      req.lastSignIn = lastSignIn;
-      return res.json({ message: "success", token, userData, lastSignIn });
-    }
-    return res.status(401).json({ message: err_pass });
   } else {
     return res.status(409).json({ message: err_email2 });
   }
@@ -187,31 +149,36 @@ export const forgetPassword = catchAsync(async (req, res, next) => {
 
 export const protectRoutes = catchAsync(async (req, res, next) => {
   let err_1 = "please login first";
-  let err_2 = "user Invalid";
+  let err_2 = "Forbidden: You do not have permission to perform this action.";
   let err_3 = "token Invalid";
   if (req.query.lang == "ar") {
     err_1 = "الرجاء تسجيل الدخول اولا";
-    err_2 = "المستخدم غير مصرح به";
+    err_2 = "ممنوع: ليس لديك صلاحية للقيام بهذا العملية.";
     err_3 = "التوكن غير صحيح";
   }
-  const authorizationHeader = req.headers.authorization;
-  if (!authorizationHeader) {
-    return next(new AppError(`${err_1}`, 401));
-  }
-  const token = authorizationHeader.split(" ")[1];
-  if (!token) {
-    return next(new AppError(`${err_1}`, 401));
-  }
-  let decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-  let user = await userModel.findById(decoded.userId);
-  if (!user) {
-    return next(new AppError(`${err_2}`, 401));
-  }
-  if (user.changePasswordAt) {
-    let changePasswordTime = parseInt(user.changePasswordAt.getTime() / 1000);
-    if (changePasswordTime > decoded.iat) {
-      return next(new AppError(`${err_3}`, 401));
+  try{
+    
+    const authorizationHeader = req.headers.authorization;
+    if (!authorizationHeader) {
+      return next(new AppError(`${err_1}`, 401));
     }
+    const token = authorizationHeader.split(" ")[1];
+    if (!token) {
+      return next(new AppError(`${err_1}`, 401));
+    }
+    let decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    let user = await userModel.findById(decoded.userId);
+    if (!user) {
+      return next(new AppError(`${err_2}`, 401));
+    }
+    if (user.changePasswordAt) {
+      let changePasswordTime = parseInt(user.changePasswordAt.getTime() / 1000);
+      if (changePasswordTime > decoded.iat) {
+        return next(new AppError(`${err_3}`, 401));
+      }
+    }
+  }catch(err){
+    return next(new AppError(`${err_3}`, 401));
   }
   req.user = user;
     req.userId = user._id; // Attach user ID for logging purposes

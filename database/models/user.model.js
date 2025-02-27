@@ -33,10 +33,6 @@ const userSchema = mongoose.Schema(
       type:Boolean,
       default:false,
     },
-    verificationCode: {
-      type: String,
-      // required:true
-    },
     branch:{
       type: [mongoose.Schema.Types.ObjectId],
       ref: "branch",

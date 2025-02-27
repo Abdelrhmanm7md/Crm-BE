@@ -26,11 +26,11 @@ const createProduct = catchAsync(async (req, res, next) => {
   // }
   let gallery = photoUpload(req, "gallery", "products");
   let pic = photoUpload(req, "pic", "products");
-  pic = pic[0].replace(`${process.env.LOCALHOST}`, "");
+  pic = pic[0].replace(`${process.env.HOST}`, "");
   // http://147.93.89.1:8000/
   req.body.pic = pic;
   req.body.gallery = gallery.map((pic) =>
-    pic.replace(`${process.env.LOCALHOST}`, "")
+    pic.replace(`${process.env.HOST}`, "")
   );
   let newProduct = new productModel(req.body);
   let addedProduct = await newProduct.save({ context: { query: req.query } });
@@ -259,14 +259,14 @@ const updatePhotos = catchAsync(async (req, res, next) => {
   // Handling 'pic' upload logic
   if (check.pic === undefined) {
     pic = photoUpload(req, "pic", "products");
-    pic = pic[0]?.replace(`${process.env.LOCALHOST}`, "");
+    pic = pic[0]?.replace(`${process.env.HOST}`, "");
   }
 
   if (check.pic !== undefined && req.files && req.files.pic) {
     // Remove old file if a new one is being uploaded
     removeFile("products", check.pic);
     pic = photoUpload(req, "pic", "products");
-    pic = pic[0]?.replace(`${process.env.LOCALHOST}`, "");
+    pic = pic[0]?.replace(`${process.env.HOST}`, "");
   }
 
   if (pic) {
@@ -319,7 +319,7 @@ const updatePhotos = catchAsync(async (req, res, next) => {
       ? newGalleryPhotos
       : [newGalleryPhotos];
     newGalleryPhotos = newGalleryPhotos.map((file) =>
-      file.replace(`${process.env.LOCALHOST}`, "")
+      file.replace(`${process.env.HOST}`, "")
     );
 
     if (newGalleryPhotos.length > 0) {
@@ -480,7 +480,7 @@ cron.schedule("0 */6 * * *", () => {
 });
 
 // Call once at startup
-fetchAndStoreProducts();
+// fetchAndStoreProducts();
 
 export {
   createProduct,

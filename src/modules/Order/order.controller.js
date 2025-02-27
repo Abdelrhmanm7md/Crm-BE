@@ -228,7 +228,7 @@ const fetchAndStoreOrders = async () => {
           userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
         } // Create if not exists
       );
-
+      
       const shippingId = shippingDoc?._id;
       let couponId = null;
       const isValidDate = (date) => {
@@ -349,7 +349,7 @@ const fetchAndStoreOrders = async () => {
 };
 
 // Run the function
-fetchAndStoreOrders();
+// fetchAndStoreOrders();
 
 cron.schedule("0 */6 * * *", () => {
   console.log("🔄 Running scheduled product update...");

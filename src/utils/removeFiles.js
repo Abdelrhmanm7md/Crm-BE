@@ -64,7 +64,7 @@ export const photoUpload = (req, fieldName, uploadDirectory) => {
     // Generate file URLs
     req.body[fieldName] = req.files[fieldName].map(
       (file) =>
-        `${process.env.LOCALHOST}${uploadDirectory}/${file.filename
+        `${process.env.HOST}${uploadDirectory}/${file.filename
           .split(" ")
           .join("-")}`
     );

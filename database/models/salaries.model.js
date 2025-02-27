@@ -94,4 +94,7 @@ salarySchema.pre(
   }
 );
 
+salarySchema.pre(/^find/, function () {
+  this.populate("user");
+});
 export const salaryModel = mongoose.model("salary", salarySchema);
