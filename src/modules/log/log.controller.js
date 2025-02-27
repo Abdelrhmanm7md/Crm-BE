@@ -4,16 +4,18 @@ import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const getAllLog = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(logModel.find(), req.query).pagination();
-  // .filter()
-  // .sort()
-  // .search()
-  // .fields();
+  let ApiFeat = new ApiFeature(logModel.find(), req.query);
+  await ApiFeat.pagination(); // Ensure pagination waits for total count
 
   let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done",page: ApiFeat.page, results ,});
-});
 
+  res.json({
+    message: "Done",
+    page: ApiFeat.page,
+    totalPages: ApiFeat.totalPages,
+    results,
+  });
+});
 const exportBrand = catchAsync(async (req, res, next) => {
   // Define variables before passing them
   const query = {};

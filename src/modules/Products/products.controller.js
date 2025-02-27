@@ -42,19 +42,17 @@ const createProduct = catchAsync(async (req, res, next) => {
 });
 
 const getAllProduct = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(productModel.find(), req.query).pagination()
-  // .filter()
-  // .sort()
-  // .search()
-  // .fields();
-  // let message_1 = "Product not found!"
-  // if(req.query.lang == "ar"){
-  //   message_1 = "المنتج غير موجود"
-  // }
-  // !ApiFeat && res.status(404).json({ message: message_1 });
+  let ApiFeat = new ApiFeature(productModel.find(), req.query);
+  await ApiFeat.pagination(); // Ensure pagination waits for total count
 
   let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done",page: ApiFeat.page, results });
+
+  res.json({
+    message: "Done",
+    page: ApiFeat.page,
+    totalPages: ApiFeat.totalPages,
+    results,
+  });
 });
 const exportProduct = catchAsync(async (req, res, next) => {
   // Define variables before passing them
