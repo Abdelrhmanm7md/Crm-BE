@@ -34,7 +34,7 @@ export function init(app) {
   app.use("/api/v1/log", logRouter);
   app.use("/api/v1/supplier-order", supplierOrderRouter);
   app.use("/api/v1/salary", salaryRouter);
-  app.use("/api/v1/expense", expensesRouter);
+  app.use("/api/v1/expenses", expensesRouter);
   app.use("/api/v1/capital", capitalRouter);
   app.use("/api/v1/stats", statsRouter);
 
