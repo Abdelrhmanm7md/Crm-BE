@@ -4,8 +4,11 @@ import { logModel } from "./log.model.js";
 const salarySchema = mongoose.Schema(
   {
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
       required: true,
     },
     salary: {
@@ -22,19 +25,13 @@ const salarySchema = mongoose.Schema(
   { timestamps: true }
 );
 salarySchema.pre("save", async function (next) {
-  let check = await salaryModel.findOne({ user: this.user });
+  let check = await salaryModel.findOne({ phone: this.phone });
   const queryData = this.$locals.queryData;
-  let err_1 = "Salary should be greater than 0";
-  let err_2 = "Salary for this user already exists";
+  let err = "Phone number for this user already exists";
   if (queryData?.lang == "ar") {
-    err_1 = "الراتب يجب أن يكون أكبر من 0";
-    err_2 = "الراتب لهذا المستخدم موجود بالفعل";
-  }
-  if (this.salary <= 0) {
-    return next(new Error(err_1));
-  }
+    err = "رقم الهاتف مسجل بالفعل";}
   if (check) {
-    return next(new Error(err_2));
+    return next(new Error(err));
   }
   next();
 });

@@ -2,6 +2,11 @@ import { brandModel } from "../../../database/models/brand.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
+import axios from "axios";
+import cron from "node-cron";
+import mongoose from "mongoose";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const createBrand = catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
@@ -106,6 +111,68 @@ const deleteBrand = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ message: message_2});
 });
+
+const fetchAndStoreBrand = async () => {
+  try {
+    console.log("⏳ Fetching brand from WooCommerce API...");
+    
+    const { data } = await axios.get(
+      "https://a2mstore.com/wp-json/wc/v3/products/brands",
+      {
+        auth: {
+          username: process.env.CONSUMERKEY,
+          password: process.env.CONSUMERSECRET,
+        },
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+            ).toString("base64"),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    for (const item of data) {
+      const BrandData = {
+        name: item.name,
+        slug: item.slug,
+        SKU: item.id.toString(),
+        suppliers: [],
+        createdBy: process.env.WEBSITEADMIN, // Assuming website admin creates the Brand
+      };
+
+      // Check if Brand already exists by slug or name
+      const existingBrand = await brandModel.findOne({ slug: item.slug });
+
+      if (existingBrand) {
+        await brandModel.findByIdAndUpdate(existingBrand._id, BrandData, {
+          userId: `${process.env.WEBSITEADMIN}`,
+          context: { query: {} },
+        });
+        console.log(`✅ Updated Brand: ${item.name}`);
+      } else {
+        await brandModel.create(BrandData);
+        console.log(`✅ Created Brand: ${item.name}`);
+      }
+    }
+
+    console.log("✅ brand updated successfully!");
+  } catch (error) {
+    console.error("❌ Error fetching brand:", error.message);
+  }
+};
+
+
+// ✅ Schedule the function to run every 6 hours
+cron.schedule("0 */6 * * *", () => {
+  console.log("🔄 Running scheduled product update...");
+  fetchAndStoreBrand();
+});
+
+// Call once at startup
+fetchAndStoreBrand();
 
 export {
   createBrand,

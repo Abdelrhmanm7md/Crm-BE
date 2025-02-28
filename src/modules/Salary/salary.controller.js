@@ -69,24 +69,36 @@ const getSalaryById = catchAsync(async (req, res, next) => {
 });
 const updateSalary = catchAsync(async (req, res, next) => {
   let { id } = req.params;
+  let message_1 = "Couldn't update! Not found!";
+  let message_2 = "Salary updated successfully!";
+  
+  if (req.query.lang == "ar") {
+    message_1 = "تعذر التحديث! غير موجود!";
+    message_2 = "تم تحديث الراتب بنجاح!";
+  }
 
-  let updatedSalary = await salaryModel.findByIdAndUpdate(id, req.body, {
-    new: true,userId: req.userId, context: { query: req.query }
+  let updatedSalaries;
+
+  if (Array.isArray(id)) {
+    updatedSalaries = await salaryModel.updateMany(
+      { _id: { $in: id } }, 
+      { $set: req.body },
+      { new: true, multi: true }
+    );
+  } else {
+    updatedSalaries = await salaryModel.findByIdAndUpdate(id, req.body, { new: true });
+  }
+
+  if (!updatedSalaries || (Array.isArray(id) && updatedSalaries.matchedCount === 0)) {
+    return res.status(404).json({ message: message_1 });
+  }
+
+  res.status(200).json({ 
+    message: message_2, 
+    updatedSalaries 
   });
-  let message_1 = "Couldn't update!  not found!"
-  let message_2 = "Salary updated successfully!"
-  if(req.query.lang == "ar"){
-    message_1 = "تعذر التحديث! غير موجود!"
-    message_2 = "تم تحديث الراتب بنجاح!"
-  }
-  if (!updatedSalary) {
-    return res.status(404).json({ message: message_1});
-  }
-
-  res
-    .status(200)
-    .json({ message: message_2, updatedSalary });
 });
+
 const deleteSalary = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   

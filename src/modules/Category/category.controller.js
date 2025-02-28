@@ -2,6 +2,11 @@ import { categoryModel } from "../../../database/models/category.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
+import axios from "axios";
+import cron from "node-cron";
+import mongoose from "mongoose";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const createCategory = catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
@@ -17,15 +22,7 @@ const createCategory = catchAsync(async (req, res, next) => {
 
 const getAllCategory = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(categoryModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-  //   let message_1 = "Category not found!"
-  //   if(req.query.lang == "ar"){
-  //     message_1 = "القسم غير موجود"
-  //   }
+
 
   let results = await ApiFeat.mongooseQuery;
   // if (!results || results.length === 0) {
@@ -117,6 +114,69 @@ const deleteCategory = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ message: message_2 });
 });
+
+const fetchAndStoreCategory = async () => {
+  try {
+    console.log("⏳ Fetching categories from WooCommerce API...");
+    
+    const { data } = await axios.get(
+      "https://a2mstore.com/wp-json/wc/v3/products/categories",
+      {
+        auth: {
+          username: process.env.CONSUMERKEY,
+          password: process.env.CONSUMERSECRET,
+        },
+        headers: {
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+            ).toString("base64"),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    for (const item of data) {
+      const categoryData = {
+        name: item.name,
+        slug: item.slug,
+        SKU: item.id.toString(),
+        suppliers: [],
+        createdBy: process.env.WEBSITEADMIN, // Assuming website admin creates the category
+      };
+
+      // Check if category already exists by slug or name
+      const existingCategory = await categoryModel.findOne({ slug: item.slug });
+
+      if (existingCategory) {
+        await categoryModel.findByIdAndUpdate(existingCategory._id, categoryData, {
+          userId: `${process.env.WEBSITEADMIN}`,
+          context: { query: {} },
+        });
+        console.log(`✅ Updated Category: ${item.name}`);
+      } else {
+        await categoryModel.create(categoryData);
+        console.log(`✅ Created Category: ${item.name}`);
+      }
+    }
+
+    console.log("✅ Categories updated successfully!");
+  } catch (error) {
+    console.error("❌ Error fetching categories:", error.message);
+  }
+};
+
+
+// ✅ Schedule the function to run every 6 hours
+cron.schedule("0 */6 * * *", () => {
+  console.log("🔄 Running scheduled product update...");
+  fetchAndStoreCategory();
+});
+
+// Call once at startup
+fetchAndStoreCategory();
+
 
 export {
   createCategory,
