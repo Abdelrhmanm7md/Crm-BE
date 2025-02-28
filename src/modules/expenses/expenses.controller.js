@@ -17,17 +17,28 @@ const createExpenses = catchAsync(async (req, res, next) => {
 
 const getAllExpenses = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(expensesModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-//     let message_1 = "No Expenses was found!"
-//     if(req.query.lang == "ar"){
-//       message_1 = "لم يتم العثور على عميل!"
-//     }
-//  !ApiFeat && res.status(404).json({ message: message_1 });
 
+  let results = await ApiFeat.mongooseQuery;
+  res.json({ message: "Done", results });
+
+});
+const getAllExpensesToday = catchAsync(async (req, res, next) => {
+  let ApiFeat = new ApiFeature(expensesModel.find({createdAt: { $and: [{ $gt: new Date().setHours(0, 0, 0, 0) }, { $lt: new Date().setHours(23, 59, 59, 999) }]}}), req.query)
+
+  let results = await ApiFeat.mongooseQuery;
+  res.json({ message: "Done", results });
+
+});
+const getAllExpensesSpecificDate = catchAsync(async (req, res, next) => {
+  let date = new Date(req.params.date);
+
+  let startOfDay = new Date(date.setHours(0, 0, 0, 0)); // Get the start of the day
+  let endOfDay = new Date(date.setHours(23, 59, 59, 999)); // Get the end of the day
+
+  let ApiFeat = new ApiFeature(
+    expensesModel.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+    req.query
+  );
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
 
@@ -110,6 +121,8 @@ const deleteExpenses = catchAsync(async (req, res, next) => {
 export {
   createExpenses,
   getAllExpenses,
+  getAllExpensesToday,
+  getAllExpensesSpecificDate,
   exportExpenses,
   getExpensesById,
   deleteExpenses,

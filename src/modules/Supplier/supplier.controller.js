@@ -1,4 +1,5 @@
 import { supplierModel } from "../../../database/models/supplier.model.js";
+import { supplierOrderModel } from "../../../database/models/supplierOrder.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -16,29 +17,64 @@ const createSupplier = catchAsync(async (req, res, next) => {
 
 const getAllSupplier = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(supplierModel.find(), req.query);
-  // .pagination()
-  // .filter()
-  // .sort()
-  // .search()
-  // .fields();
+  await ApiFeat.pagination(); 
 
-  let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done", results });
+  let suppliers = await ApiFeat.mongooseQuery;
+
+  const supplierIds = suppliers.map(supplier => supplier._id);
+
+  const payments = await supplierOrderModel.aggregate([
+    { $match: { supplier: { $in: supplierIds } } }, // Filter by supplier IDs
+    { 
+      $group: { 
+        _id: "$supplier", 
+        totalRemainingPayment: { $sum: "$remainingPayment" } 
+      } 
+    }
+  ]);
+
+  let paymentMap = new Map(payments.map(p => [p._id.toString(), p.totalRemainingPayment]));
+
+  suppliers = suppliers.map(supplier => {
+    let supplierObj = supplier.toObject();
+    supplierObj.totalRemainingPayment = paymentMap.get(supplier._id.toString()) || 0;
+    return supplierObj;
+  });
+
+  res.json({ message: "Done", page: ApiFeat.page, totalPages: ApiFeat.totalPages, results: suppliers });
 });
+
 
 const getSupplierById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let Supplier = await supplierModel.find({_id:id});
-  let message_1 = "No Supplier was found!"
-  if(req.query.lang == "ar"){
-    message_1 = "لم يتم العثور على مورد"
+  let supplier = await supplierModel.find({ _id: id });
+  let message_1 = "No Supplier was found!";
+  if (req.query.lang == "ar") {
+    message_1 = "لم يتم العثور على مورد";
   }
-  if (!Supplier || Supplier.length === 0) {
+
+  if (!supplier) {
     return res.status(404).json({ message: message_1 });
   }
-  Supplier = Supplier[0];
-  res.status(200).json({ message: "Done", Supplier });
+supplier = supplier[0]; 
+
+  const paymentData = await supplierOrderModel.aggregate([
+    { $match: { supplier: supplier._id } }, // Match orders for this supplier
+    { 
+      $group: { 
+        _id: "$supplier", 
+        totalRemainingPayment: { $sum: "$remainingPayment" } 
+      } 
+    }
+  ]);
+
+  let totalRemainingPayment = paymentData.length > 0 ? paymentData[0].totalRemainingPayment : 0;
+
+  res.status(200).json({ 
+    message: "Done", 
+    results: { ...supplier.toObject(), totalRemainingPayment } 
+  });
 });
 
 const exportSupplier = catchAsync(async (req, res, next) => {

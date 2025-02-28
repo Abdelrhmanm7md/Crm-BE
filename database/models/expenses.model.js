@@ -10,6 +10,11 @@ const expensesSchema = mongoose.Schema(
     description: {
       type: String,
     },
+    type: {
+      type: String,
+      enum: ["in", "out"],
+      required: true,
+    },
     amount: {
       type: Number,
       min : 0,
