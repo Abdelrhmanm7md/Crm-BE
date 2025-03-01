@@ -7,9 +7,9 @@ import exportData from "../../utils/export.js";
 
 const getAllUsersByAdmin = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(
-    userModel.find().limit(10),
+    userModel.find().limit(15),
     req.query
-  ).search();
+  )
   let message = "No users was found! add a new user to get started!";
   if (req.query.lang == "ar") {
     message = "لا يوجد مستخدمين! أضف مستخدم جديد للبدء!";
