@@ -104,7 +104,7 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  let result = await productModel.find({ brand: { $in: [brandId] } });
+  let result = await productModel.find({ brand: brandId });
 
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
