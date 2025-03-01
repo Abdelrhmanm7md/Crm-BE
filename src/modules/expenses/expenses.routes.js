@@ -7,9 +7,7 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 expensesRouter.get("/",protectRoutes, expensesController.getAllExpenses);
 expensesRouter.get("/today/",protectRoutes, expensesController.getAllExpensesToday);
-expensesRouter.get("/specific/:date",protectRoutes, expensesController.getAllExpensesToday);
-expensesRouter.get("/",protectRoutes, expensesController.getAllExpenses);
-expensesRouter.get("/export/", protectRoutes,expensesController.exportExpenses);
+expensesRouter.get("/specific/",protectRoutes, expensesController.getAllExpensesSpecificDate);
 expensesRouter.get("/:id",protectRoutes, expensesController.getExpensesById);
 expensesRouter.put("/:id",protectRoutes, expensesController.updateExpenses);
 expensesRouter.post("/",protectRoutes, expensesController.createExpenses);

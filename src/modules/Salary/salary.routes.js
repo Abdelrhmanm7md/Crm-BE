@@ -6,6 +6,7 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 
 salaryRouter.get("/",protectRoutes, salaryController.getAllSalary);
+salaryRouter.get("/month/",protectRoutes, salaryController.getAllSalaryByMonth);
 salaryRouter.get("/export/", protectRoutes,salaryController.exportSalary);
 salaryRouter.get("/:id",protectRoutes, salaryController.getSalaryById);
 salaryRouter.put("/:id",protectRoutes, salaryController.updateSalary);

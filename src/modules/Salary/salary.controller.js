@@ -32,6 +32,30 @@ const getAllSalary = catchAsync(async (req, res, next) => {
   res.json({ message: "Done", results });
 
 });
+const getAllSalaryByMonth = catchAsync(async (req, res, next) => {
+  if (!req.query.date) {
+    return res.status(400).json({ message: "Date parameter is required" });
+  }
+
+  let dateParts = req.query.date.split("/"); // Expecting format: YYYY/MM
+  if (dateParts.length !== 2) {
+    return res.status(400).json({ message: "Invalid date format. Expected YYYY/MM." });
+  }
+
+  let year = parseInt(dateParts[0]);
+  let month = parseInt(dateParts[1]) - 1; // Month is 0-based in JS
+
+  let startOfMonth = new Date(Date.UTC(year, month, 1));
+  let endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)); // Last day of the month
+
+  let ApiFeat = new ApiFeature(
+    salaryModel.find({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+    req.query
+  );
+
+  let results = await ApiFeat.mongooseQuery;
+  res.json({ message: "Done", results });
+});
 
 const exportSalary = catchAsync(async (req, res, next) => {
   // Define variables before passing them
@@ -78,15 +102,25 @@ const updateSalary = catchAsync(async (req, res, next) => {
   }
 
   let updatedSalaries;
-
+  if (typeof id === "string" && id.startsWith("[")) {
+    try {
+      id = JSON.parse(id);
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+  }
   if (Array.isArray(id)) {
     updatedSalaries = await salaryModel.updateMany(
       { _id: { $in: id } }, 
       { $set: req.body },
-      { new: true, multi: true }
+      {
+        new: true,userId: req.userId, context: { query: req.query },
+       multi: true }
     );
   } else {
-    updatedSalaries = await salaryModel.findByIdAndUpdate(id, req.body, { new: true });
+    updatedSalaries = await salaryModel.findByIdAndUpdate(id, req.body, {
+      new: true,userId: req.userId, context: { query: req.query }
+    });
   }
 
   if (!updatedSalaries || (Array.isArray(id) && updatedSalaries.matchedCount === 0)) {
@@ -101,27 +135,55 @@ const updateSalary = catchAsync(async (req, res, next) => {
 
 const deleteSalary = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-  
-  let customer = await salaryModel.findById(id);
-  let message_1 = "Couldn't delete! Not found!"
-  let message_2 = "Salary deleted successfully!"
-  if(req.query.lang == "ar"){
-    message_1 = "لم يتم الحذف! غير موجود!"
-    message_2 = "تم حذف الراتب بنجاح!"
-  }
-  if (!customer) {
-    return res.status(404).json({ message: message_1 });
+  let message_1 = "Couldn't delete! Not found!";
+  let message_2 = "Salary deleted successfully!";
+
+  if (req.query.lang == "ar") {
+    message_1 = "لم يتم الحذف! غير موجود!";
+    message_2 = "تم حذف الراتب بنجاح!";
   }
 
-  customer.userId = req.userId;
-  await customer.deleteOne();
+  if (typeof id === "string" && id.startsWith("[")) {
+    try {
+      id = JSON.parse(id); 
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+  }
 
-  res.status(200).json({ message: message_2 });
+  if (Array.isArray(id)) {
+    let deletedCount = 0;
+
+    for (const salaryId of id) {
+      let salary = await salaryModel.findById(salaryId);
+      if (salary) {
+        salary.userId = req.userId;
+        await salary.deleteOne();
+        deletedCount++;
+      }
+    }
+    if (deletedCount === 0) {
+      return res.status(404).json({ message: message_1 });
+    }
+    return res.status(200).json({ message: message_2, deletedCount });
+  } else {
+    let salary = await salaryModel.findById(id);
+    if (!salary) {
+      return res.status(404).json({ message: message_1 });
+    }
+
+    salary.userId = req.userId;
+    await salary.deleteOne();
+
+    return res.status(200).json({ message: message_2 });
+  }
 });
+
 
 export {
   createSalary,
   getAllSalary,
+  getAllSalaryByMonth,
   exportSalary,
   getSalaryById,
   deleteSalary,

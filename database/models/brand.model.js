@@ -28,7 +28,7 @@ const brandSchema = mongoose.Schema(
     suppliers: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "supplier",
-      required: true,
+      // required: true,
     },
     productsCount: {
       type: Number,
