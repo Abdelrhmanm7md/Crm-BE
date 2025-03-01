@@ -52,13 +52,12 @@ export const signUp = catchAsync(async (req, res, next) => {
 
   let results = new userModel(req.body);
   let token = jwt.sign(
-    { name: userData.name, userId: userData._id },
+    { name: results.name, userId: results._id },
     process.env.JWT_SECRET_KEY ,
     {
       expiresIn: process.env.JWT_TOKEN_EXPIRES_IN,
     }
   );
-  text = text + `${results.verificationCode}`;
   results.password = bcrypt.hashSync(results.password, Number(process.env.SALTED_VALUE));
 
   await results.save();

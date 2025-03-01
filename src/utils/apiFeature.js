@@ -32,12 +32,12 @@ export default class ApiFeature {
     }
     return this;
   }
-  search(filterType) {
-    if (this.queryStr.keyword) {
-      this.mongooseQuery.find(
-          { filterType: { $regex: this.queryStr.keyword, $options: "i" } },
-      );
-    }
-    return this;
-  }
+  // search(filterType) {
+  //   if (this.queryStr.keyword) {
+  //     this.mongooseQuery.find(
+  //         { filterType: { $regex: this.queryStr.keyword, $options: "i" } },
+  //     );
+  //   }
+  //   return this;
+  // }
 }
