@@ -100,11 +100,11 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
     message_2 = "الماركة غير موجود!";
   }
 
-  let check = await branchModel.findById(brandId);  
+  const validBrandId = new mongoose.Types.ObjectId(brandId);
+  let check = await branchModel.findById(validBrandId);  
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  const validBrandId = new mongoose.Types.ObjectId(brandId);
   let result = await productModel.find({ brand: { $in: [validBrandId] } }).lean();
 console.log(result,"ress");
 
