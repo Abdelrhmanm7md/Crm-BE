@@ -105,7 +105,8 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
     return res.status(404).json({ message: message_2 });
   }
   const validBrandId = new mongoose.Types.ObjectId(brandId);
-  let result = await productModel.find({ brand: { $in: [validBrandId] } });
+  let result = await productModel.find({ brand: { $in: [validBrandId] } }).lean();
+console.log(result,"ress");
 
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
