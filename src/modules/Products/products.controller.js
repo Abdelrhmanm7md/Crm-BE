@@ -99,11 +99,12 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
     message_1 = "لا يوجد منتجات!";
     message_2 = "الماركة غير موجود!";
   }
-  let check = await branchModel.findById(brandId);
+
+  let check = await branchModel.findById(brandId);  
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  let result = await productModel.find({ brand: brandId });
+  let result = await productModel.find({ brand: { $in: [brandId] } });
 
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
@@ -124,7 +125,7 @@ const getAllProductsByBranch = catchAsync(async (req, res, next) => {
     return res.status(404).json({ message: message_2 });
   }
 
-  let result = await productModel.find({ "store.branch": branchId });
+  let result = await productModel.find({ store: { $elemMatch: { branch: branchId } } });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
@@ -145,7 +146,7 @@ const getAllProductsByCategory = catchAsync(async (req, res, next) => {
     return res.status(404).json({ message: message_2 });
   }
 
-  let result = await productModel.find({ category: categoryId });
+  let result = await productModel.find({ category: { $in: [categoryId] } });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }

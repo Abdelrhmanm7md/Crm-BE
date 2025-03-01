@@ -49,9 +49,15 @@ const getAllSalaryByMonth = catchAsync(async (req, res, next) => {
   let endOfMonth = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)); // Last day of the month
 
   let ApiFeat = new ApiFeature(
-    salaryModel.find({ createdAt: { $gte: startOfMonth, $lte: endOfMonth } }),
+    salaryModel.find({
+      timeTable: {
+        $elemMatch: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      }
+    }),
     req.query
-  );
+  );  
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });

@@ -16,6 +16,16 @@ const salarySchema = mongoose.Schema(
       min : 0,
       required: [true, "salary is a required field."],
     },
+    timeTable:[
+      {
+        date:{
+          type:Date,
+        },
+        isPaid:{
+          type:Boolean,
+          default:false
+        }
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
