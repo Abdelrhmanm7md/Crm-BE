@@ -93,10 +93,13 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
       req.body.timeTablePayment.forEach((payment) => {
         req.body.paidPayment += payment.amount
       })
+      req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
+      if(req.body.paidPayment > req.body.totalAmount){
+        return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
+      }
     }
 
     // ✅ Step 3: Update order
-    req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
     const updatedOrder = await supplierOrderModel.findByIdAndUpdate(
       req.params.id,
       req.body,

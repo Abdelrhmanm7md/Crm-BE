@@ -422,12 +422,13 @@ const fetchAndStoreProducts = async () => {
         //   },
         // ],
         createdBy: `${process.env.WEBSITEADMIN}`,
-        costPrice: 0,
+        costPrice: parseFloat(item.regular_price) || 0,
         sellingPrice: parseFloat(item.price) || 0,
-        discountPrice: parseFloat(item.sale_price) || 0,
-        discountPercentage: item.regular_price
-          ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
-          : 0,
+        salePrice: parseFloat(item.sale_price) || 0,
+        // discountPrice: parseFloat(item.sale_price) || 0,
+        // discountPercentage: item.regular_price
+        //   ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
+        //   : 0,
       };
 
       const storeEntry = {
