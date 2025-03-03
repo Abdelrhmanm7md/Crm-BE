@@ -115,7 +115,6 @@ supplierSchema.pre(
     next();
   }
 );
-
 supplierSchema.post("find", async function (docs) {
   if (!docs.length) return;
 
@@ -135,21 +134,18 @@ supplierSchema.post("find", async function (docs) {
     },
   ]);
 
-  const updates = orderStats.map(stat => ({
-    updateOne: {
-      filter: { _id: stat._id },
-      update: {
-        $set: {
-          ordersCount: stat.supplierOrders || 0,
-          collectionAmount: (stat.totalAmount || 0) * (stat.totalOrders || 0),
-        },
-      },
-    },
-  }));
+  const statsMap = new Map();
+  orderStats.forEach(stat => {
+    statsMap.set(stat._id.toString(), stat);
+  });
 
-  if (updates.length) {
-    await supplierModel.bulkWrite(updates);
-  }
+  docs.forEach(doc => {
+    const stat = statsMap.get(doc._id.toString());
+    doc.ordersCount = stat?.supplierOrders || 0;
+    doc.collectionAmount =
+      ((stat?.totalAmount || 0) * (stat?.totalOrders || 0)) -
+      (stat?.supplierOrders || 0);
+  });
 });
 
 export const supplierModel = mongoose.model("supplier", supplierSchema);

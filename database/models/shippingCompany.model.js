@@ -176,23 +176,19 @@ shippingCompanySchema.post("find", async function (docs) {
     },
   ]);
 
-  const updates = orderStats.map(stat => ({
-    updateOne: {
-      filter: { _id: stat._id },
-      update: {
-        $set: {
-          ordersCount: stat.shippingOrders || 0,
-          collectionAmount: ((stat.totalAmount || 0) * (stat.totalOrders || 0)) - (stat.shippingOrders || 0),
-        },
-      },
-    },
-  }));
+  const statsMap = new Map();
+  orderStats.forEach(stat => {
+    statsMap.set(stat._id.toString(), stat);
+  });
 
-  if (updates.length) {
-    await shippingCompanyModel.bulkWrite(updates);
-  }
+  docs.forEach(doc => {
+    const stat = statsMap.get(doc._id.toString());
+    doc.ordersCount = stat?.shippingOrders || 0;
+    doc.collectionAmount =
+      ((stat?.totalAmount || 0) * (stat?.totalOrders || 0)) -
+      (stat?.shippingOrders || 0);
+  });
 });
-
 
 export const shippingCompanyModel = mongoose.model(
   "shippingCompany",

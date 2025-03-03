@@ -3,7 +3,7 @@ import { logModel } from "./log.model.js";
 
 const capitalSchema = mongoose.Schema(
   {
-    name: {
+    reason: {
       type: String,
       required: [true, "Name is a required field."],
       minLength: [2, "Name is too short."],

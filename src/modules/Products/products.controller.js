@@ -134,7 +134,7 @@ const getAllProductsByCategory = catchAsync(async (req, res, next) => {
 const getProductById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let Product = await productModel.findById(id);
+  let Product = await productModel.find({ _id: id });
   let message_1 = "Product not found!";
   if (req.query.lang == "ar") {
     message_1 = "المنتج غير موجود";
@@ -142,7 +142,7 @@ const getProductById = catchAsync(async (req, res, next) => {
   if (!Product) {
     return res.status(404).json({ message: message_1 });
   }
-
+Product = Product[0];
   res.status(200).json({ message: "Done", Product });
 });
 
