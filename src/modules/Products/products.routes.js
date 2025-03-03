@@ -20,13 +20,13 @@ productRouter.get("/fetch/", productController.fetchAllProducts);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);
 productRouter.put("/:id",protectRoutes, productController.updateProduct);
-productRouter.put(
-  "/photos/:id",
-  protectRoutes,
-  uploadMixFile("products", [{ name: "gallery" }, { name: "pic" }]),
-  fileSizeLimitErrorHandler,
-  productController.updatePhotos
-);
+// productRouter.put(
+//   "/photos/:id",
+//   protectRoutes,
+//   uploadMixFile("products", [{ name: "gallery" }, { name: "pic" }]),
+//   fileSizeLimitErrorHandler,
+//   productController.updatePhotos
+// );
 productRouter.delete("/:id",protectRoutes, productController.deleteProduct);
 
 export default productRouter;

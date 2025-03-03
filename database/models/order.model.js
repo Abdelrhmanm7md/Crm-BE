@@ -191,6 +191,9 @@ orderSchema.pre("save", async function (next) {
   let check = await couponModel.findOne({ _id: this.coupon });
   
   if(check && check.isValid == true){
+    if(check.freeShipping == true){
+      this.shippingPrice = 0
+    }
     switch (check.type) {
       case "both":
         this.totalAmount =  ((totalPrice + this.shippingPrice) * (check.discountPercentage / 100))
@@ -271,6 +274,9 @@ orderSchema.pre("findOneAndUpdate", async function () {
   this._update.totalAmount = totalPrice + this._update.shippingPrice
   let check = await couponModel.findById(this._update.coupon);
   if(check && check.isValid == true && (this._update.orderStatus === "processing") ){
+    if(check.freeShipping == true){
+      this._update.shippingPrice = 0
+    }
     switch (check.type) {
       case "both":
         this._update.totalAmount =  ((totalPrice + this._update.shippingPrice) * (check.discountPercentage / 100))

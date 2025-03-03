@@ -182,7 +182,7 @@ shippingCompanySchema.post("find", async function (docs) {
       update: {
         $set: {
           ordersCount: stat.shippingOrders || 0,
-          collectionAmount: (stat.totalAmount || 0) * (stat.totalOrders || 0),
+          collectionAmount: ((stat.totalAmount || 0) * (stat.totalOrders || 0)) - (stat.shippingOrders || 0),
         },
       },
     },
