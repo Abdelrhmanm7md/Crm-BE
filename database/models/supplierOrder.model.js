@@ -21,12 +21,12 @@ const supplierOrderSchema = mongoose.Schema(
     paidPayment: {
       type: Number,
       min : 0,
-      required: [true, "paid Payment is a required field."],
+      // required: [true, "paid Payment is a required field."],
     },
     remainingPayment : {
       type: Number,
       min : 0,
-      required: [true, "remaining Payment is a required field."],
+      // required: [true, "remaining Payment is a required field."],
     },
     products: [
           {
@@ -49,6 +49,16 @@ const supplierOrderSchema = mongoose.Schema(
     notes: {
       type: String,
     },
+    timeTablePayment:[
+      {
+        date:{
+          type:Date,
+          required:true
+        },
+        amount:{
+          type:Number,
+        },
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -75,7 +85,10 @@ supplierOrderSchema.pre("save", async function (next) {
   this.totalAmount = this.products.reduce((acc, product) => {
     return acc + product.price * product.quantity;
   }, 0);
-  this.remainingPayment = this.totalAmount - this.paidPayment;
+  this.timeTablePayment.forEach((payment) => {
+    this.paidPayment += payment.amount
+  })
+  this.remainingPayment = this.totalAmount - this.paidPayment
   await logModel.create({
     user: this.createdBy,
     action: "create Order from Supplier || انشاء طلبية من المورد",

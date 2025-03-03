@@ -1,6 +1,5 @@
 import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import { photoUpload, removeFile } from "../../utils/removeFiles.js";
 import { supplierModel } from "../../../database/models/supplier.model.js";
@@ -54,24 +53,7 @@ const getAllProduct = catchAsync(async (req, res, next) => {
     results,
   });
 });
-const exportProduct = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
 
-  await exportData(
-    req,
-    res,
-    next,
-    productModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
   let { supplierId } = req.params;
   let message_1 = "No Products was found!";
@@ -93,10 +75,8 @@ const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
 });
 const getAllProductsByBrand = catchAsync(async (req, res, next) => {
   let { brandId } = req.params;
-  let message_1 = "No Products was found!";
   let message_2 = "brand not found!";
   if (req.query.lang == "ar") {
-    message_1 = "لا يوجد منتجات!";
     message_2 = "الماركة غير موجود!";
   }
 
@@ -106,11 +86,6 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
     return res.status(404).json({ message: message_2 });
   }
   let result = await productModel.find({ brand: { $in: [validBrandId] } }).lean();
-console.log(result,"ress");
-
-  if (!result || result.length === 0) {
-    return res.status(404).json({ message: message_1 });
-  }
 
   res.status(200).json({ message: "Done", result });
 });
@@ -424,6 +399,7 @@ const fetchAndStoreProducts = async () => {
       // 🔹 Product Data
       const productData = {
         name: item.name,
+        wordPressId: item.id,
         SKU: productSKU,
         shortDescription: item.short_description || "",
         description: item.description || "",
@@ -435,16 +411,16 @@ const fetchAndStoreProducts = async () => {
         })),
         pic: item.images.length > 0 ? item.images[0].src : undefined,
         gallery: item.images.map((img) => img.src),
-        store: [
-          {
-            branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
-            quantity:
-              item.stock_status === "instock" &&
-              typeof item.stock_quantity === "number"
-                ? item.stock_quantity
-                : 0,
-          },
-        ],
+        // store: [
+        //   {
+        //     branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+        //     quantity:
+        //       item.stock_status === "instock" &&
+        //       typeof item.stock_quantity === "number"
+        //         ? item.stock_quantity
+        //         : 0,
+        //   },
+        // ],
         createdBy: `${process.env.WEBSITEADMIN}`,
         costPrice: 0,
         sellingPrice: parseFloat(item.price) || 0,
@@ -454,19 +430,31 @@ const fetchAndStoreProducts = async () => {
           : 0,
       };
 
+      const storeEntry = {
+        branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+        quantity:
+          item.stock_status === "instock" && typeof item.stock_quantity === "number"
+            ? item.stock_quantity
+            : 0,
+      };
       // 🔹 Update Product if Exists, Else Create
       if (existingProduct) {
-        await productModel.findByIdAndUpdate(existingProduct._id, productData, {
+        await productModel.findByIdAndUpdate(existingProduct._id,{
+          $set: productData, // Update existing fields
+          $push: { store: storeEntry }, // Push to store array
+        }, {
           userId: `${process.env.WEBSITEADMIN}`,
           context: { query: {} },
         });
         console.log(`✅ Updated Product: ${item.name}`);
       } else {
-        await productModel.create(productData);
+        await productModel.create({
+          ...productData,
+          store: [storeEntry], // Initialize store array with storeEntry
+        });
         console.log(`✅ Created Product: ${item.name}`);
       }
     }
-
     console.log("✅ Products updated successfully!");
   } catch (error) {
     console.error("❌ Error fetching products:", error.message);
@@ -478,8 +466,14 @@ cron.schedule("0 */6 * * *", () => {
   console.log("🔄 Running scheduled product update...");
   fetchAndStoreProducts();
 });
+const fetchAllProducts = catchAsync(async (req, res, next) => {
 
-// Call once at startup
+  fetchAndStoreProducts();
+  
+  res.json({
+    message: "Done",
+  });
+});
 fetchAndStoreProducts();
 
 export {
@@ -493,5 +487,5 @@ export {
   deleteProduct,
   updateProduct,
   updatePhotos,
-  exportProduct,
+  fetchAllProducts,
 };

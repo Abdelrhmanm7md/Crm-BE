@@ -16,7 +16,7 @@ productRouter.get("/category/:categoryId",protectRoutes, productController.getAl
 productRouter.get("/brand/:brandId",protectRoutes, productController.getAllProductsByBrand);
 productRouter.get("/branch/:branchId",protectRoutes, productController.getAllProductsByBranch);
 productRouter.get("/supplier/:supplierId",protectRoutes, productController.getAllProductsBySupplier);
-productRouter.get("/export/", productController.exportProduct);
+productRouter.get("/fetch/", productController.fetchAllProducts);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);
 productRouter.put("/:id",protectRoutes, productController.updateProduct);

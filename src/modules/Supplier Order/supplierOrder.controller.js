@@ -24,16 +24,7 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
 
 const getAllSupplierOrder = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(supplierOrderModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-//     let message_1 = "No SupplierOrder was found!"
-//     if(req.query.lang == "ar"){
-//       message_1 = "لم يتم العثور على عميل!"
-//     }
-//  !ApiFeat && res.status(404).json({ message: message_1 });
+
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
@@ -98,12 +89,18 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
     }
 
     // ✅ Step 3: Update order
+    req.body.totalAmount = req.body.products.reduce((acc, product) => {
+      return acc + product.price * product.quantity;
+    }, 0);
+    req.body.timeTablePayment.forEach((payment) => {
+      req.body.paidPayment += payment.amount
+    })
+    req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
     const updatedOrder = await supplierOrderModel.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true,userId: req.userId, context: { query: req.query } }
     );
-
     res.status(200).json({ message: message_2, updatedOrder });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -12,6 +12,10 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    wordPressId: {
+      type: String,
+      default:null,
+    },
     shortDescription: {
       type: String,
       // required: true,

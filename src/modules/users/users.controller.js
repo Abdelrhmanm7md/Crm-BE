@@ -6,22 +6,15 @@ import exportData from "../../utils/export.js";
 
 
 const getAllUsersByAdmin = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(
-    userModel.find().limit(15),
-    req.query
-  )
-  let message = "No users was found! add a new user to get started!";
-  if (req.query.lang == "ar") {
-    message = "لا يوجد مستخدمين! أضف مستخدم جديد للبدء!";
-  }
+  let ApiFeat = new ApiFeature(userModel.find(), req.query);
+  await ApiFeat.pagination(); // Ensure pagination waits for total count
+
   let results = await ApiFeat.mongooseQuery;
-  if (!results) {
-    return res.status(404).json({
-      message
-    });
-  }
+
   res.json({
     message: "Done",
+    page: ApiFeat.page,
+    totalPages: ApiFeat.totalPages,
     countAllUsers: await userModel.countDocuments(),
     // countOwners: await userModel.countDocuments({ role: "66d33a4b4ad80e468f231f83" }),
     // countContractors: await userModel.countDocuments({ role: "66d33ec44ad80e468f231f91" }),
