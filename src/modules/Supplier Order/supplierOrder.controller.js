@@ -56,9 +56,9 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
     message_2 = "تم تحديث طلب المورد بنجاح!";
   }
   
+  const order = await supplierOrderModel.findById(req.params.id);
   try {
     const { products } = req.body;
-    const order = await supplierOrderModel.findById(req.params.id);
     
     if (!order) {
       return res.status(404).json({ message: message_1 });
@@ -86,15 +86,16 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
         )
       );
       await Promise.all(applyUpdates);
+      req.body.totalAmount = order.products.reduce((acc, product) => {
+        return acc + product.price * product.quantity;
+      }, 0);
+  
+      req.body.timeTablePayment.forEach((payment) => {
+        req.body.paidPayment += payment.amount
+      })
     }
 
     // ✅ Step 3: Update order
-    req.body.totalAmount = req.body.products.reduce((acc, product) => {
-      return acc + product.price * product.quantity;
-    }, 0);
-    req.body.timeTablePayment.forEach((payment) => {
-      req.body.paidPayment += payment.amount
-    })
     req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
     const updatedOrder = await supplierOrderModel.findByIdAndUpdate(
       req.params.id,

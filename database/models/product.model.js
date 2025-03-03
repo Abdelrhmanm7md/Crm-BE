@@ -85,6 +85,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    salePrice: {
+      type: Number,
+      default:null,
+    },
     sellingPrice: {
       type: Number,
       required: true,
@@ -216,6 +220,11 @@ productSchema.pre(
   }
 );
 
+productSchema.post("find", function (docs) {
+  docs.forEach((doc) => {
+    doc.totalQuantity = doc.store.reduce((sum, storeItem) => sum + storeItem.quantity, 0);
+  });
+});
 productSchema.pre(/^find/, function () {
   this.populate({"path":"store.branch"});
   this.populate("supplier");
