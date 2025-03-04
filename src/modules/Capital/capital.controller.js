@@ -55,7 +55,10 @@ const amountResult = await productModel.aggregate([
   }
 
   results.push(productsData)
-  res.json({ message: "Done", results });
+  let totalProfit = results.reduce((total, item) => {
+    return total + item.amount;
+  })
+  res.json({ message: "Done",totalProfit , results });
 
 });
 
