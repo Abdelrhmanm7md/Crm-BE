@@ -6,12 +6,12 @@ const categorySchema = mongoose.Schema(
   {
     name: {
       type: String,
-      unique: [true, "name is required"],
+      // unique: [true, "name is required"],
       required: true,
     },
     slug: {
       type: String,
-      unique: [true, "name is required"],
+      // unique: [true, "name is required"],
       // required: true,
     },
     SKU: {
