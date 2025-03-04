@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import { productModel } from "./product.model.js";
 
 const capitalSchema = mongoose.Schema(
   {
@@ -78,5 +79,31 @@ capitalSchema.pre(
     next();
   }
 );
+
+
+capitalSchema.post("find", async function (docs) {
+  const amountResult = await productModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalAmount: {
+          $sum: {
+            $cond: {
+              if: { $gt: ["$salePrice", 0] }, // If salePrice exists and is > 0
+              then: "$salePrice", // Use salePrice
+              else: "$sellingPrice", // Otherwise, use sellingPrice
+            },
+          },
+        },
+      },
+    },
+  ]);
+  const productsData = {
+    reson : "Products",
+    amount : amountResult[0]?.totalAmount
+  }
+
+  docs.push(productsData)
+});
 
 export const capitalModel = mongoose.model("capital", capitalSchema);

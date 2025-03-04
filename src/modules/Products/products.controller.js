@@ -395,7 +395,8 @@ const fetchAndStoreProducts = async () => {
       );
 
       const existingProduct = await productModel.findOne({ SKU: productSKU });
-
+      const attributeName = "costPrice"; 
+      const attribute = item.attributes.find(attr => attr.name === attributeName);
       // 🔹 Product Data
       const productData = {
         name: item.name,
@@ -422,9 +423,11 @@ const fetchAndStoreProducts = async () => {
         //   },
         // ],
         createdBy: `${process.env.WEBSITEADMIN}`,
-        costPrice: parseFloat(item.regular_price) || 0,
+        costPrice: attribute 
+        ? parseFloat(attribute.options[0]) || 0 // Convert to number, default to 0 if NaN
+        : 0,
         sellingPrice: parseFloat(item.price) || 0,
-        salePrice: parseFloat(item.sale_price) || 0,
+        salePrice: parseFloat(item.sale_price) || null,
         // discountPrice: parseFloat(item.sale_price) || 0,
         // discountPercentage: item.regular_price
         //   ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
