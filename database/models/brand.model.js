@@ -6,15 +6,15 @@ const brandSchema = mongoose.Schema(
   {
     name: {
       type: String,
-      unique: [true, "name is required"],
+      // unique: [true, "name is required"],
       required: true,
       minLength: [2, "too short brand name"],
     },
     slug: {
       type: String,
-      unique: [true, "name is required"],
+      // unique: [true, "name is required"],
       // required: true,
-      minLength: [2, "too short category name"],
+      // minLength: [2, "too short category name"],
     },
     SKU: {
       type: String,
