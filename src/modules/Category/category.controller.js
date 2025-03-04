@@ -177,7 +177,14 @@ cron.schedule("0 */6 * * *", () => {
 // Call once at startup
 fetchAndStoreCategory();
 
+const fetchAllCategory = catchAsync(async (req, res, next) => {
 
+  
+  fetchAndStoreCategory();
+  res.json({
+    message: "Done",
+  });
+});
 export {
   createCategory,
   getAllCategory,
@@ -185,4 +192,5 @@ export {
   getCategoryById,
   deleteCategory,
   updateCategory,
+  fetchAllCategory,
 };

@@ -174,6 +174,15 @@ cron.schedule("0 */6 * * *", () => {
 // Call once at startup
 fetchAndStoreBrand();
 
+const fetchAllBrand = catchAsync(async (req, res, next) => {
+
+  
+  fetchAndStoreBrand();
+  res.json({
+    message: "Done",
+  });
+});
+
 export {
   createBrand,
   getAllBrand,
@@ -181,4 +190,5 @@ export {
   getBrandById,
   deleteBrand,
   updateBrand,
+  fetchAllBrand,
 };

@@ -12,9 +12,6 @@ const brandSchema = mongoose.Schema(
     },
     slug: {
       type: String,
-      // unique: [true, "name is required"],
-      // required: true,
-      // minLength: [2, "too short category name"],
     },
     SKU: {
       type: String,

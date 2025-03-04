@@ -11,8 +11,6 @@ const categorySchema = mongoose.Schema(
     },
     slug: {
       type: String,
-      // unique: [true, "name is required"],
-      // required: true,
     },
     SKU: {
       type: String,
