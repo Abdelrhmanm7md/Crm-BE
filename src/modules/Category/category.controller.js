@@ -4,7 +4,6 @@ import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import axios from "axios";
 import cron from "node-cron";
-import mongoose from "mongoose";
 import * as dotenv from "dotenv";
 dotenv.config();
 

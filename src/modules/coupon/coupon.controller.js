@@ -2,6 +2,10 @@ import { couponModel } from "../../../database/models/coupon.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import AppError from "../../utils/appError.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
+import axios from "axios";
+import cron from "node-cron";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 const createCoupon =catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
@@ -95,6 +99,59 @@ const deleteCoupon =  catchAsync(async (req, res, next) => {
   res.status(200).json({ message: "Coupon deleted successfully!" });
 });
 
+
+const fetchAndStoreCoupons = async () => {
+  try {
+    const response = await axios.get(
+      `${process.env.WORDPRESS_URL}/wp-json/wc/v3/coupons`,
+      {
+        auth: {
+          username: process.env.WC_CONSUMER_KEY,
+          password: process.env.WC_CONSUMER_SECRET,
+        },
+      }
+    );
+
+    const coupons = response.data;
+
+    for (const item of coupons) {
+      await couponModel.findOneAndUpdate(
+        { wordPressId: item.id }, // Check if coupon exists
+        {
+          wordPressId: item.id,
+          code: item.code,
+          amount: parseFloat(item.amount),
+          discountType: item.discount_type,
+          description: item.description || "",
+          dateCreated: new Date(item.date_created),
+        },
+        { upsert: true, new: true } // Update if exists, insert if not
+      );
+    }
+
+    console.log("✅ Coupons updated successfully.");
+  } catch (error) {
+    console.error("❌ Error fetching coupons:", error.response?.data || error.message);
+  }
+};
+
+// Call the function
+fetchAndStoreCoupons();
+cron.schedule("0 */6 * * *", () => {
+  console.log("🔄 Running scheduled product update...");
+  fetchAndStoreCoupons();
+});
+
+// Call once at startup();
+
+const fetchAllCoupons = catchAsync(async (req, res, next) => {
+
+  
+  fetchAndStoreCoupons();
+  res.json({
+    message: "Done",
+  });
+});
 export {
   createCoupon,
   getAllCoupons,
@@ -102,4 +159,5 @@ export {
   getCheckCoupon,
   updateCoupon,
   deleteCoupon,
+  fetchAllCoupons,
 };

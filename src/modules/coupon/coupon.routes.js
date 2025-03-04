@@ -11,6 +11,7 @@ couponRouter
   .post(protectRoutes, couponController.createCoupon);
 
 couponRouter.post('/valid/',protectRoutes,couponController.getCheckCoupon)
+couponRouter.get('/fetch/',protectRoutes,couponController.fetchAllCoupons)
 couponRouter
   .route("/:id")
   .get(protectRoutes,couponController.getCouponById)

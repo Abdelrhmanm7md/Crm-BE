@@ -3,6 +3,7 @@ import { logModel } from "./log.model.js";
 
 const couponSchema = mongoose.Schema(
   {
+    wordPressId: { type: Number, unique: true }, // To prevent duplicates
     code: {
       type: String,
       trim: true,

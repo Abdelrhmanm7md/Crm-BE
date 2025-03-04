@@ -444,11 +444,16 @@ const fetchAndStoreProducts = async () => {
       // 🔹 Update Product if Exists, Else Create
       if (existingProduct) {
         await productModel.findByIdAndUpdate(existingProduct._id,{
-          $set: productData, // Update existing fields
-          $push: { store: storeEntry }, // Push to store array
+          $set: productData,
+          $set: { 
+            "store.$[elem].quantity": storeEntry.quantity // Update quantity if branch exists
+          }, // Update existing fields
+          $addToSet: { store: storeEntry }, // Push to store array
         }, {
           userId: `${process.env.WEBSITEADMIN}`,
           context: { query: {} },
+          arrayFilters: [{ "elem.branch": storeEntry.branch }], // Filter to update only matching branch
+          upsert: false,
         });
         console.log(`✅ Updated Product: ${item.name}`);
       } else {
