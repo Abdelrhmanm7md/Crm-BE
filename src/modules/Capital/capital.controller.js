@@ -1,4 +1,5 @@
 import { capitalModel } from "../../../database/models/capital.model.js";
+import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -17,40 +18,47 @@ const createCapital = catchAsync(async (req, res, next) => {
 
 const getAllCapital = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(capitalModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-//     let message_1 = "No Capital was found!"
-//     if(req.query.lang == "ar"){
-//       message_1 = "لم يتم العثور على عميل!"
-//     }
-//  !ApiFeat && res.status(404).json({ message: message_1 });
 
   let results = await ApiFeat.mongooseQuery;
+const amountResult = await productModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalAmount: {
+          $sum: {
+            $subtract: [
+              {
+                $cond: {
+                  if: { $gt: ["$salePrice", 0] }, // If salePrice exists and is > 0
+                  then: "$salePrice", // Use salePrice
+                  else: "$sellingPrice", // Otherwise, use sellingPrice
+                },
+              },
+              "$costPrice", // Subtract costPrice
+            ],
+          },
+          },
+        totalCostPrice: {
+          $sum: "$costPrice",
+        },
+        totalSellingPrice: {
+          $sum: "$sellingPrice",
+        },
+      },
+    },
+  ]);
+  const productsData = {
+    reason : "Products",
+    amount : amountResult[0]?.totalAmount,
+    totalCostPrice : amountResult[0]?.totalCostPrice,
+    totalSellingPrice : amountResult[0]?.totalSellingPrice
+  }
+
+  results.push(productsData)
   res.json({ message: "Done", results });
 
 });
 
-const exportCapital = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    capitalModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 
 const getCapitalById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -110,7 +118,6 @@ const deleteCapital = catchAsync(async (req, res, next) => {
 export {
   createCapital,
   getAllCapital,
-  exportCapital,
   getCapitalById,
   deleteCapital,
   updateCapital,
