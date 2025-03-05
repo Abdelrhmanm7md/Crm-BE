@@ -118,10 +118,17 @@ const deleteCategory = catchAsync(async (req, res, next) => {
 const fetchAndStoreCategory = async () => {
   try {
     console.log("⏳ Fetching categories from WooCommerce API...");
-
+    let page = 1;
+    let allCate = [];
+    let totalFetched = 0;
+    do {
     const { data } = await axios.get(
       "https://a2mstore.com/wp-json/wc/v3/products/categories",
       {
+        params: {
+          per_page: 100, // Maximum limit per request (adjust as needed)
+          page: page,
+        },
         auth: {
           username: process.env.CONSUMERKEY,
           password: process.env.CONSUMERSECRET,
@@ -136,8 +143,13 @@ const fetchAndStoreCategory = async () => {
         },
       }
     );
+    totalFetched = data.length;
+    allCate.push(...data);
+    page++;
+  } while (totalFetched === 100); 
 
-    for (const item of data) {
+  console.log(`✅ Fetched ${allCate.length} Categories from WooCommerce`);
+    for (const item of allCate) {
       const categoryData = {
         name: item.name,
         slug: item.slug,

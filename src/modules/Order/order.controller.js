@@ -261,10 +261,19 @@ const deleteOrder = catchAsync(async (req, res, next) => {
 const fetchAndStoreOrders = async () => {
   try {
     console.log("⏳ Fetching orders from WooCommerce API...");
+    let page = 1;
+    let allOrders = [];
+    let totalFetched = 0;
+    do {
 
+    
     const { data } = await axios.get(
       "https://a2mstore.com/wp-json/wc/v3/orders",
       {
+        params: {
+          per_page: 100, // Maximum limit per request (adjust as needed)
+          page: page,
+        },
         auth: {
           username: process.env.CONSUMERKEY,
           password: process.env.CONSUMERSECRET,
@@ -279,8 +288,13 @@ const fetchAndStoreOrders = async () => {
         },
       }
     );
+    totalFetched = data.length;
+    allOrders.push(...data);
+    page++;
+  } while (totalFetched === 100); // Continue fetching until no more allOrders
 
-    for (const item of data) {
+  console.log(`✅ Fetched ${allOrders.length} Orders from WooCommerce`);
+    for (const item of allOrders) {
       const existingOrder = await orderModel.findOne({ SKU: `WP-${item.id}` });
 
       // 🔹 Extract customer

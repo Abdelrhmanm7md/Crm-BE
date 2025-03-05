@@ -15,7 +15,7 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
         { new: true ,userId: req.userId, context: { query: req.query } }
       );
     }
-    req.body.totalAmount = order.products.reduce((acc, product) => {
+    req.body.totalAmount = req.body.products.reduce((acc, product) => {
       return acc + product.price * product.quantity;
     }, 0);
 
@@ -76,27 +76,9 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
     }
     
     // ✅ Check if products changed
-    const productsChanged = JSON.stringify(order.products) !== JSON.stringify(products);
     
-    if ((productsChanged && req.body.products) || req.body.timeTablePayment  ) {
-      const revertUpdates = order.products.map(item =>
-        productModel.findOneAndUpdate(
-          { _id: item.product, "store.branch": item.branch },
-          { $inc: { "store.$.quantity": -item.quantity } }, // Subtract old quantity
-          { new: true,userId: req.userId, context: { query: req.query } }
-        )
-      );
-      await Promise.all(revertUpdates);
+    if (req.body.timeTablePayment  ) {
 
-      // ✅ Step 2: Apply new quantities
-      const applyUpdates = products.map(item =>
-        productModel.findOneAndUpdate(
-          { _id: item.product, "store.branch": item.branch },
-          { $inc: { "store.$.quantity": item.quantity } }, // Add new quantity
-          { new: true,userId: req.userId, context: { query: req.query } }
-        )
-      );
-      await Promise.all(applyUpdates);
       req.body.totalAmount = order.products.reduce((acc, product) => {
         return acc + product.price * product.quantity;
       }, 0);

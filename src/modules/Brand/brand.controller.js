@@ -115,10 +115,17 @@ const deleteBrand = catchAsync(async (req, res, next) => {
 const fetchAndStoreBrand = async () => {
   try {
     console.log("⏳ Fetching brand from WooCommerce API...");
-
+    let page = 1;
+    let allBrands = [];
+    let totalFetched = 0;
+    do {
     const { data } = await axios.get(
       "https://a2mstore.com/wp-json/wc/v3/products/brands",
       {
+        params: {
+          per_page: 100, // Maximum limit per request (adjust as needed)
+          page: page,
+        },
         auth: {
           username: process.env.CONSUMERKEY,
           password: process.env.CONSUMERSECRET,
@@ -133,8 +140,13 @@ const fetchAndStoreBrand = async () => {
         },
       }
     );
+    totalFetched = data.length;
+    allBrands.push(...data);
+    page++;
+  } while (totalFetched === 100); // Continue fetching until no more products
 
-    for (const item of data) {
+  console.log(`✅ Fetched ${allBrands.length} brands from WooCommerce`);
+    for (const item of allBrands) {
       const BrandData = {
         name: item.name,
         slug: item.slug,

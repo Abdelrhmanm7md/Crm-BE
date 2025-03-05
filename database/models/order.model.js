@@ -154,7 +154,6 @@ orderSchema.pre("save", async function (next) {
       let err_1 = `Product with ID ${item.product} not found.`;
       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
       let err_3 = `Insufficient quantity for product: ${product.name}`
-      console.log(queryData,"queryData2");
 
       if (queryData?.lang == "ar") {
         err_1 = `هذا الصنف غير موجود${item.product}!`;
@@ -172,9 +171,9 @@ orderSchema.pre("save", async function (next) {
         );
       }
 
-      if (storeItem.quantity < item.quantity) {
-        throw new Error(`${err_3}`);
-      }
+      // if (storeItem.quantity < item.quantity) {
+      //   throw new Error(`${err_3}`);
+      // }
 
     }
 
