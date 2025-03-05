@@ -17,6 +17,7 @@ const createShippingCompany = catchAsync(async (req, res, next) => {
 
 const getAllShippingCompany = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(shippingCompanyModel.find(), req.query)
+  await ApiFeat.pagination()
     // .pagination()
     // .filter()
     // .sort()
@@ -24,28 +25,24 @@ const getAllShippingCompany = catchAsync(async (req, res, next) => {
     // .fields();
 
   let results = await ApiFeat.mongooseQuery;
-  res.json({ message: "Done", results });
+  res.json({ message: "Done",
+    page : ApiFeat.page,
+    totalPages : ApiFeat.totalPages,
+    results });
 
 });
 
 const exportShippingCompany = catchAsync(async (req, res, next) => {
   // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    shippingCompanyModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
+    let ApiFeat = new ApiFeature(shippingCompanyModel.find(), req.query);
+    let results = await ApiFeat.mongooseQuery;
+  
+    res.json({
+      message: "Done",
+      results,
+    });
+  
+  });
 
 const getShippingCompanyById = catchAsync(async (req, res, next) => {
   let { id } = req.params;

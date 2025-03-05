@@ -47,21 +47,40 @@ try{
         totalOrders: { $sum: 1 }, // Count total orders
         completedOrders: {
           $sum: { $cond: [{ $eq: ["$orderStatus", "completed"] }, 1, 0] },
-        }, // Count only completed orders
-        totalCompletedAmount: {
-          $sum: {
-            $cond: [
-              { $eq: ["$orderStatus", "completed"] },
-              { $subtract: ["$totalAmount", "$shippingPrice"] },
-              0,
-            ],
-          },
-        }, 
+        }, // Count completed orders
+        processingOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "processing"] }, 1, 0] },
+        }, // Count processing orders
+        cancelledOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "cancelled"] }, 1, 0] },
+        }, // Count cancelled orders
       },
     },
-    // {
-    //   $sort: { "_id.year": 1, "_id.month": 1 },
-    // },
+    {
+      $sort: { "_id.year": -1, "_id.month": -1 }, // Sort by latest months first
+    },
+    { $limit: 6 }, // Get only the last 6 months
+    {
+      $project: {
+        _id: 0,
+        month: {
+          $dateToString: {
+            format: "%Y-%m",
+            date: {
+              $dateFromParts: {
+                year: "$_id.year",
+                month: "$_id.month",
+                day: 1, // Set day to 1 to create a valid date
+              },
+            },
+          },
+        },
+        totalOrders: 1,
+        completedOrders: 1,
+        processingOrders: 1,
+        cancelledOrders: 1,
+      },
+    },
   ]);
     results.orderResult = orderResult
   results = { ...results, ...orderStats };

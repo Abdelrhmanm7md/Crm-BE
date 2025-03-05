@@ -62,22 +62,14 @@ const updateUser = catchAsync(async (req, res, next) => {
 });
 
 const exportUsers = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
+  let ApiFeat = new ApiFeature(userModel.find(), req.query);
+  let results = await ApiFeat.mongooseQuery;
 
-  await exportData(
-    req,
-    res,
-    next,
-    userModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
+  res.json({
+    message: "Done",
+    results,
+  });
+
 });
 
 

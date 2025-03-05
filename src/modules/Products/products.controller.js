@@ -54,6 +54,16 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   });
 });
 
+const exportProducts = catchAsync(async (req, res, next) => {
+  let ApiFeat = new ApiFeature(productModel.find(), req.query);
+  let results = await ApiFeat.mongooseQuery;
+
+  res.json({
+    message: "Done",
+    results,
+  });
+
+});
 const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
   let { supplierId } = req.params;
   let message_1 = "No Products was found!";
@@ -520,4 +530,5 @@ export {
   updateProduct,
   // updatePhotos,
   fetchAllProducts,
+  exportProducts,
 };

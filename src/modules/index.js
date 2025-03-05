@@ -14,7 +14,6 @@ import authRouter from "./auth/auth.routes.js";
 import couponRouter from "./coupon/coupon.routes.js";
 import logRouter from "./log/log.routes.js";
 import shippingCompanyRouter from "./shipping Company/shippingCompany.routes.js";
-import subCategoryRouter from "./subcategories/subCategories.routes.js";
 import usersRouter from "./users/users.routes.js";
 import statsRouter from "./Stats/stats.routes.js";
 export function init(app) {
@@ -28,7 +27,6 @@ export function init(app) {
   app.use("/api/v1/supplier", supplierRouter);
   app.use("/api/v1/shippng", shippingCompanyRouter);
   app.use("/api/v1/category", categoryRouter);
-  app.use("/api/v1/sub-category", subCategoryRouter);
   app.use("/api/v1/order", orderRouter);
   app.use("/api/v1/coupon", couponRouter);
   app.use("/api/v1/log", logRouter);

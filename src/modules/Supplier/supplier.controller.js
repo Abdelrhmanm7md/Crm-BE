@@ -78,22 +78,15 @@ supplier = supplier[0];
 });
 
 const exportSupplier = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
+  // Define variables before passing themconst exportUsers = catchAsync(async (req, res, next) => {
+  let ApiFeat = new ApiFeature(supplierModel.find(), req.query);
+  let results = await ApiFeat.mongooseQuery;
 
-  await exportData(
-    req,
-    res,
-    next,
-    supplierModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
+  res.json({
+    message: "Done",
+    results,
+  });
+
 });
 
 const updateSupplier = catchAsync(async (req, res, next) => {
