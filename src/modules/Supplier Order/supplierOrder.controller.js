@@ -4,38 +4,54 @@ import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createSupplierOrder = catchAsync(async (req, res, next) => {  
-    req.body.createdBy = req.user._id;
-    let newSupplierOrder = new supplierOrderModel(req.body);
-    let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
-    let products = req.body.products;
-    for (const item of products) {
-      await productModel.findOneAndUpdate(
-        { _id: item.product, "store.branch": item.branch },
-        { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
-        { new: true ,userId: req.userId, context: { query: req.query } }
-      );
-    }
-    req.body.totalAmount = req.body.products.reduce((acc, product) => {
-      return acc + product.price * product.quantity;
-    }, 0);
+  try {
+      req.body.createdBy = req.user._id;
+      
+      let newSupplierOrder = new supplierOrderModel(req.body);
+      let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
 
-    req.body.timeTablePayment.forEach((payment) => {
-      req.body.paidPayment += payment.amount
-    })
-    req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
-    if(req.body.paidPayment > req.body.totalAmount){
-      return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
-    }
-    res.status(201).json({
-      message: "SupplierOrder has been created successfully!",
-      addedSupplierOrder,
-    });
-  });
-  
+      let products = req.body.products || []; // Ensure products is an array
+      for (const item of products) {
+          await productModel.findOneAndUpdate(
+              { _id: item.product, "store.branch": item.branch },
+              { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
+              { new: true, userId: req.userId, context: { query: req.query } }
+          );
+      }
+
+      // Calculate totalAmount
+      req.body.totalAmount = products.reduce((acc, product) => {
+          return acc + (product.price || 0) * (product.quantity || 0);
+      }, 0);
+
+      // Ensure paidPayment starts from 0
+      req.body.paidPayment = 0;
+
+      // Check if timeTablePayment is an array before using forEach
+      if (Array.isArray(req.body.timeTablePayment)) {
+          req.body.timeTablePayment.forEach((payment) => {
+              req.body.paidPayment += payment.amount || 0;
+          });
+      }
+
+      req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment;
+      if (req.body.paidPayment > req.body.totalAmount) {
+          return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
+      }
+
+      res.status(201).json({
+          message: "SupplierOrder has been created successfully!",
+          addedSupplierOrder,
+      });
+
+  } catch (error) {
+      next(error);
+  }
+});
+
 
 const getAllSupplierOrder = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(supplierOrderModel.find(), req.query)
-
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
@@ -78,9 +94,7 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
 
     if (timeTablePayment) {
       // Calculate totalAmount
-      req.body.totalAmount = order.products.reduce((acc, product) => {
-        return acc + (product.price || 0) * (product.quantity || 0);
-      }, 0);
+
 
       // Ensure paidPayment starts from 0
       req.body.paidPayment = 0;
@@ -89,9 +103,9 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
         req.body.paidPayment += payment.amount || 0; // Avoid NaN
       });
 
-      req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment;
+      req.body.remainingPayment = order.totalAmount - req.body.paidPayment;
 
-      if (req.body.paidPayment > req.body.totalAmount) {
+      if (req.body.paidPayment > order.totalAmount) {
         return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
       }
     }
