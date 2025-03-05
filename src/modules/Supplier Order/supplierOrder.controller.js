@@ -61,48 +61,53 @@ const getSupplierOrderById = catchAsync(async (req, res, next) => {
 const updateSupplierOrder = catchAsync(async (req, res, next) => {
   let message_1 = "Couldn't update! Not found!";
   let message_2 = "Supplier Order updated successfully!";
-  
+
   if (req.query.lang === "ar") {
     message_1 = "تعذر التحديث! غير موجود!";
     message_2 = "تم تحديث طلب المورد بنجاح!";
   }
-  
-  const order = await supplierOrderModel.findById(req.params.id);
-  try {
-    const { products } = req.body;
-    
-    if (!order) {
-      return res.status(404).json({ message: message_1 });
-    }
-    
-    // ✅ Check if products changed
-    
-    if (req.body.timeTablePayment  ) {
 
-      req.body.totalAmount = order.products.reduce((acc, product) => {
-        return acc + product.price * product.quantity;
-      }, 0);
+  const order = await supplierOrderModel.findById(req.params.id);
   
-      req.body.timeTablePayment.forEach((payment) => {
-        req.body.paidPayment += payment.amount
-      })
-      req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
-      if(req.body.paidPayment > req.body.totalAmount){
+  if (!order) {
+    return res.status(404).json({ message: message_1 });
+  }
+
+  try {
+    const { products, timeTablePayment } = req.body;
+
+    if (timeTablePayment) {
+      // Calculate totalAmount
+      req.body.totalAmount = order.products.reduce((acc, product) => {
+        return acc + (product.price || 0) * (product.quantity || 0);
+      }, 0);
+
+      // Ensure paidPayment starts from 0
+      req.body.paidPayment = 0;
+
+      timeTablePayment.forEach((payment) => {
+        req.body.paidPayment += payment.amount || 0; // Avoid NaN
+      });
+
+      req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment;
+
+      if (req.body.paidPayment > req.body.totalAmount) {
         return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
       }
     }
 
-    // ✅ Step 3: Update order
     const updatedOrder = await supplierOrderModel.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true,userId: req.userId, context: { query: req.query } }
+      { new: true, userId: req.userId, context: { query: req.query } }
     );
+
     res.status(200).json({ message: message_2, updatedOrder });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 const deleteSupplierOrder = catchAsync(async (req, res, next) => {
   let { id } = req.params;

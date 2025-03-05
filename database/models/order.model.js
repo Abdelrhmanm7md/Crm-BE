@@ -2,6 +2,7 @@ import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
 import { couponModel } from "./coupon.model.js";
+import AppError from "../../src/utils/appError.js";
 
 const orderSchema = mongoose.Schema(
   {
@@ -286,12 +287,15 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
 orderSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
-
+  
   const order = await this.model.findOne(this.getQuery()).lean();
   if (!order) return next();
-
+  
   const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
   const willProcessNow = ["shipping"].includes(update.orderStatus);
+  if (order.orderStatus === "completed") {
+    return next(new AppError("Order is already completed", 400));
+  }
 
   if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
     for (const item of order.products) {
