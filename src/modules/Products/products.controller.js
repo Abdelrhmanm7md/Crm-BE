@@ -81,11 +81,13 @@ const getAllProductsByBrand = catchAsync(async (req, res, next) => {
   }
 
   const validBrandId = new mongoose.Types.ObjectId(brandId);
-  let check = await brandModel.findById(validBrandId);  
+  let check = await brandModel.findById(validBrandId);
   if (!check) {
     return res.status(404).json({ message: message_2 });
   }
-  let result = await productModel.find({ brand: { $in: [validBrandId] } }).lean();
+  let result = await productModel
+    .find({ brand: { $in: [validBrandId] } })
+    .lean();
 
   res.status(200).json({ message: "Done", result });
 });
@@ -102,7 +104,9 @@ const getAllProductsByBranch = catchAsync(async (req, res, next) => {
     return res.status(404).json({ message: message_2 });
   }
 
-  let result = await productModel.find({ store: { $elemMatch: { branch: branchId } } });
+  let result = await productModel.find({
+    store: { $elemMatch: { branch: branchId } },
+  });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
@@ -142,7 +146,7 @@ const getProductById = catchAsync(async (req, res, next) => {
   if (!Product) {
     return res.status(404).json({ message: message_1 });
   }
-Product = Product[0];
+  Product = Product[0];
   res.status(200).json({ message: "Done", Product });
 });
 
@@ -338,34 +342,49 @@ const deleteProduct = catchAsync(async (req, res, next) => {
 // ✅ Fetch & Update Products
 const fetchAndStoreProducts = async () => {
   try {
-    console.log("⏳ Fetching products from WooCommerce API...");
-    const { data } = await axios.get(
-      "https://a2mstore.com/wp-json/wc/v3/products",
-      {
-        auth: {
-          username: process.env.CONSUMERKEY,
-          password: process.env.CONSUMERSECRET,
-        },
-        headers: {
-          Authorization:
-            "Basic " +
-            Buffer.from(
-              `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
-            ).toString("base64"),
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    let page = 1;
+    let allProducts = [];
+    let totalFetched = 0;
+    do {
+      const { data } = await axios.get(
+        "https://a2mstore.com/wp-json/wc/v3/products",
+        {
+          params: {
+            per_page: 100, // Maximum limit per request (adjust as needed)
+            page: page,
+          },
+          auth: {
+            username: process.env.CONSUMERKEY,
+            password: process.env.CONSUMERSECRET,
+          },
+          headers: {
+            Authorization:
+              "Basic " +
+              Buffer.from(
+                `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+              ).toString("base64"),
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    for (const item of data) {
-      const productSKU = item.sku ? item.sku.toLowerCase() : `WP-${item.id}`;
+      totalFetched = data.length;
+      allProducts.push(...data);
+      page++;
+    } while (totalFetched === 100); // Continue fetching until no more products
+
+    console.log(`✅ Fetched ${allProducts.length} products from WooCommerce`);
+
+    for (const item of allProducts) {
+      const productSKU = item.id.toString();
 
       const categoryIds = await Promise.all(
         item.categories.map(async (cat) => {
           const existingCategory = await categoryModel.findOneAndUpdate(
-            { name: cat.name }, // Find by name
+            { wordPressId: cat.id }, // Find by name
             {
               $setOnInsert: {
+                name: cat.name,
                 slug: cat.slug,
                 createdBy: `${process.env.WEBSITEADMIN}`,
                 SKU: `WP-${cat.id}`,
@@ -380,9 +399,10 @@ const fetchAndStoreProducts = async () => {
       const brandIds = await Promise.all(
         item.brands.map(async (brand) => {
           const existingBrand = await brandModel.findOneAndUpdate(
-            { name: brand.name }, // Find by name
+            { wordPressId: brand.id }, // Find by name
             {
               $setOnInsert: {
+                name: brand.name,
                 slug: brand.slug,
                 createdBy: `${process.env.WEBSITEADMIN}`,
                 SKU: `WP-${brand.id}`,
@@ -394,14 +414,16 @@ const fetchAndStoreProducts = async () => {
         })
       );
 
-      const existingProduct = await productModel.findOne({ SKU: productSKU });
-      const attributeName = "costPrice"; 
-      const attribute = item.attributes.find(attr => attr.name === attributeName);
+      const existingProduct = await productModel.findOne({ wordPressId: productSKU });
+      const attributeName = "costPrice";
+      const attribute = item.attributes.find(
+        (attr) => attr.name === attributeName
+      );
       // 🔹 Product Data
       const productData = {
         name: item.name,
-        wordPressId: item.id,
-        SKU: productSKU,
+        wordPressId: item.id.toString(),
+        SKU: item.SKU || `WP-${item.id}`,
         shortDescription: item.short_description || "",
         description: item.description || "",
         brand: brandIds,
@@ -412,49 +434,51 @@ const fetchAndStoreProducts = async () => {
         })),
         pic: item.images.length > 0 ? item.images[0].src : undefined,
         gallery: item.images.map((img) => img.src),
-        // store: [
-        //   {
-        //     branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
-        //     quantity:
-        //       item.stock_status === "instock" &&
-        //       typeof item.stock_quantity === "number"
-        //         ? item.stock_quantity
-        //         : 0,
-        //   },
-        // ],
         createdBy: `${process.env.WEBSITEADMIN}`,
-        costPrice: attribute 
-        ? parseFloat(attribute.options[0]) || 0 // Convert to number, default to 0 if NaN
-        : 0,
+        costPrice: attribute
+          ? parseFloat(attribute.options[0]) || 0 // Convert to number, default to 0 if NaN
+          : 0,
         sellingPrice: parseFloat(item.price) || 0,
         salePrice: parseFloat(item.sale_price) || null,
-        // discountPrice: parseFloat(item.sale_price) || 0,
-        // discountPercentage: item.regular_price
-        //   ? ((item.regular_price - item.sale_price) / item.regular_price) * 100
-        //   : 0,
+
       };
 
       const storeEntry = {
         branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
         quantity:
-          item.stock_status === "instock" && typeof item.stock_quantity === "number"
+          item.stock_status === "instock" &&
+          typeof item.stock_quantity === "number"
             ? item.stock_quantity
             : 0,
       };
       // 🔹 Update Product if Exists, Else Create
       if (existingProduct) {
-        await productModel.findByIdAndUpdate(existingProduct._id,{
-          $set: productData,
-          $set: { 
-            "store.$[elem].quantity": storeEntry.quantity // Update quantity if branch exists
-          }, // Update existing fields
-          $addToSet: { store: storeEntry }, // Push to store array
-        }, {
-          userId: `${process.env.WEBSITEADMIN}`,
-          context: { query: {} },
-          arrayFilters: [{ "elem.branch": storeEntry.branch }], // Filter to update only matching branch
-          upsert: false,
-        });
+
+        await productModel
+          .findOneAndUpdate(
+            { _id: existingProduct._id, "store.branch": storeEntry.branch },
+            { $set: { "store.$.quantity": storeEntry.quantity } },
+            {
+              new: true,
+              userId: new mongoose.Types.ObjectId(
+                `${process.env.WEBSITEADMIN}`
+              ),
+            }
+          )
+          .then(async (result) => {
+            if (!result) {
+              await productModel.findOneAndUpdate(
+                { _id: existingProduct._id },
+                { $push: { store: storeEntry } },
+                {
+                  new: true,
+                  userId: new mongoose.Types.ObjectId(
+                    `${process.env.WEBSITEADMIN}`
+                  ),
+                }
+              );
+            }
+          });
         console.log(`✅ Updated Product: ${item.name}`);
       } else {
         await productModel.create({
@@ -471,14 +495,13 @@ const fetchAndStoreProducts = async () => {
 };
 
 // ✅ Schedule the function to run every 6 hours
-cron.schedule("0 */6 * * *", () => {
+cron.schedule("* * * * *", () => {
   console.log("🔄 Running scheduled product update...");
   fetchAndStoreProducts();
 });
 const fetchAllProducts = catchAsync(async (req, res, next) => {
-
   fetchAndStoreProducts();
-  
+
   res.json({
     message: "Done",
   });

@@ -103,6 +103,10 @@ const orderSchema = mongoose.Schema(
       default:0,
       required: true,
     },
+    fromWordPress: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -138,75 +142,46 @@ orderSchema.pre("save", async function (next) {
   next();
 });
 
-// orderSchema.pre("save", async function (next) {
-//   const Product = mongoose.model("product");
-//   try {
-//     for (const item of this.products) {
-//       const queryData = this.$locals.queryData;
-//       let err_1 = `Product with ID ${item.product} not found.`;
-//       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-//       let err_3 = `Insufficient quantity for product: ${product.name}`
-//       console.log(queryData,"queryData2");
-
-//       if (queryData?.lang == "ar") {
-//         err_1 = `هذا الصنف غير موجود${item.product}!`;
-//         err_2 = `هناك مخزون (ات) غير موجود`;
-//         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
-//       }
-//       const product = await Product.findById(item.product);
-//       if (!product) {
-//         throw new Error(`${err_1}`);
-//       }
-
-//       const storeItem = product.store.find(
-//         (store) => String(store.branch._id) === String(this.branch)
-//       );
-
-//       if (!storeItem) {
-//         throw new Error(
-//           `${err_2}`
-//         );
-//       }
-
-//       if (storeItem.quantity < item.quantity) {
-//         throw new Error(`${err_3}`);
-//       }
-
-//     }
-
-//     next();
-//   } catch (error) {
-//     next(error);
-//   }
-// });
-
 orderSchema.pre("save", async function (next) {
-  
-  let totalPrice = this.products.reduce((acc, product) => {
-    return acc + product.price * product.quantity;
-  }, 0);
-  this.totalAmountBeforeDiscount = totalPrice
-  this.totalAmount = totalPrice + this.shippingPrice
-
-  let check = await couponModel.findOne({ _id: this.coupon });
-  
-  if(check && check.isValid == true){
-    if(check.freeShipping == true){
-      this.shippingPrice = 0
-    }
-    switch (check.type) {
-      case "both":
-        this.totalAmount =  ((totalPrice + this.shippingPrice) * (check.discountPercentage / 100))
-        break;
-        case "product":
-          this.totalAmount = ((totalPrice) * (check.discountPercentage / 100)) + this.shippingPrice
-          break;
-          case "shipping":
-        this.totalAmount = totalPrice + (( this.shippingPrice) * (check.discountPercentage / 100))
-        break;
+  const Product = mongoose.model("product");
+  try {
+    for (const item of this.products) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        throw new Error(`${err_1}`);
       }
+      const queryData = this.$locals.queryData;
+      let err_1 = `Product with ID ${item.product} not found.`;
+      let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
+      let err_3 = `Insufficient quantity for product: ${product.name}`
+      console.log(queryData,"queryData2");
+
+      if (queryData?.lang == "ar") {
+        err_1 = `هذا الصنف غير موجود${item.product}!`;
+        err_2 = `هناك مخزون (ات) غير موجود`;
+        err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+      }
+
+      const storeItem = product.store.find(
+        (store) => String(store.branch._id) === String(this.branch)
+      );
+
+      if (!storeItem) {
+        throw new Error(
+          `${err_2}`
+        );
+      }
+
+      if (storeItem.quantity < item.quantity) {
+        throw new Error(`${err_3}`);
+      }
+
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
 
 orderSchema.pre("save", async function (next) {
@@ -264,38 +239,6 @@ orderSchema.pre(
   }
 );
 
-orderSchema.pre("findOneAndUpdate", async function () {
-  if (this._update.products || this._update.orderStatus === "processing") {
-
-  let totalPrice = this._update.products.reduce((acc, product) => {
-    return acc + product.price * product.quantity;
-  }, 0);
-  this._update.totalAmountBeforeDiscount = totalPrice
-  this._update.totalAmount = totalPrice + this._update.shippingPrice
-  let check = await couponModel.findById(this._update.coupon);
-  if(check && check.isValid == true && (this._update.orderStatus === "processing") ){
-    if(check.freeShipping == true){
-      this._update.shippingPrice = 0
-    }
-    switch (check.type) {
-      case "both":
-        this._update.totalAmount =  ((totalPrice + this._update.shippingPrice) * (check.discountPercentage / 100))
-        break;
-        case "product":
-          this._update.totalAmount =  ((totalPrice) * (check.discountPercentage / 100)) + this._update.shippingPrice
-          break;
-          case "shipping":
-            this._update.totalAmount = totalPrice + (( this._update.shippingPrice) * (check.discountPercentage / 100))
-        break;
-      }
-  }
-  await orderModel.findByIdAndUpdate(
-    this._update._id,
-    { totalAmount: this._update.totalAmount },
-    {new:true,userId: this.options.userId,}
-  );
-}
-});
 
 orderSchema.pre("findOneAndUpdate", async function (next) {
   const Product = mongoose.model("product");
@@ -348,10 +291,10 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   const order = await this.model.findOne(this.getQuery()).lean();
   if (!order) return next();
 
-  const wasAlreadyProcessed = ["shipping", "completed"].includes(order.orderStatus);
-  const willProcessNow = ["shipping", "completed"].includes(update.orderStatus);
+  const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
+  const willProcessNow = ["shipping"].includes(update.orderStatus);
 
-  if (!wasAlreadyProcessed && willProcessNow) {
+  if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
     for (const item of order.products) {
       const product = await mongoose.model("product").findById(item.productId);
       if (product) {

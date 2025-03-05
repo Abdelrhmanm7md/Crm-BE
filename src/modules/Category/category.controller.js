@@ -9,26 +9,23 @@ dotenv.config();
 
 const createCategory = catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
-    let newCategory = new categoryModel(req.body);
-    let addedCategory = await newCategory.save({ context: { query: req.query } });
-  
-    res.status(201).json({
-      message: "Category has been created successfully!",
-      addedCategory,
-    });
+  let newCategory = new categoryModel(req.body);
+  let addedCategory = await newCategory.save({ context: { query: req.query } });
+
+  res.status(201).json({
+    message: "Category has been created successfully!",
+    addedCategory,
   });
-  
+});
 
 const getAllCategory = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(categoryModel.find(), req.query)
-
+  let ApiFeat = new ApiFeature(categoryModel.find(), req.query);
 
   let results = await ApiFeat.mongooseQuery;
   // if (!results || results.length === 0) {
   //   return res.status(404).json({ message: message_1 });
   // }
   res.json({ message: "Done", results });
-
 });
 
 const exportCategory = catchAsync(async (req, res, next) => {
@@ -54,13 +51,13 @@ const getCategoryById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
   let Category = await categoryModel.findById(id);
-  let message_1 = "Category not found!"
-  if(req.query.lang == "ar"){
-    message_1 = "القسم غير موجود"
+  let message_1 = "Category not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "القسم غير موجود";
   }
- if (!Category || Category.length === 0) {
-  return res.status(404).json({ message: message_1 });
-}
+  if (!Category || Category.length === 0) {
+    return res.status(404).json({ message: message_1 });
+  }
 
   res.status(200).json({ message: "Done", Category });
 });
@@ -80,12 +77,16 @@ const updateCategory = catchAsync(async (req, res, next) => {
   // }
 
   // const updatedCategory = await categoryModel.findByIdAndUpdate(id, update, { new: true });
-  const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, { new: true,userId: req.userId, context: { query: req.query } });
-  let message_1 = "Couldn't update!  not found!"
-  let message_2 = "Category updated successfully!"
-  if(req.query.lang == "ar"){
-    message_1 = "تعذر التحديث! غير موجود!"
-    message_2 = "تم تحديث القسم بنجاح!"
+  const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, {
+    new: true,
+    userId: req.userId,
+    context: { query: req.query },
+  });
+  let message_1 = "Couldn't update!  not found!";
+  let message_2 = "Category updated successfully!";
+  if (req.query.lang == "ar") {
+    message_1 = "تعذر التحديث! غير موجود!";
+    message_2 = "تم تحديث القسم بنجاح!";
   }
   if (!updatedCategory) {
     return res.status(404).json({ message: message_1 });
@@ -95,13 +96,13 @@ const updateCategory = catchAsync(async (req, res, next) => {
 });
 const deleteCategory = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-  
+
   let category = await categoryModel.findById(id);
-  let message_1 = "Couldn't delete! Not found!"
-  let message_2 = "Category deleted successfully!"
-  if(req.query.lang == "ar"){
-    message_1 = "تعذر الحذف! غير موجود!"
-    message_2 = "تم حذف القسم بنجاح!"
+  let message_1 = "Couldn't delete! Not found!";
+  let message_2 = "Category deleted successfully!";
+  if (req.query.lang == "ar") {
+    message_1 = "تعذر الحذف! غير موجود!";
+    message_2 = "تم حذف القسم بنجاح!";
   }
 
   if (!category) {
@@ -117,7 +118,7 @@ const deleteCategory = catchAsync(async (req, res, next) => {
 const fetchAndStoreCategory = async () => {
   try {
     console.log("⏳ Fetching categories from WooCommerce API...");
-    
+
     const { data } = await axios.get(
       "https://a2mstore.com/wp-json/wc/v3/products/categories",
       {
@@ -146,13 +147,19 @@ const fetchAndStoreCategory = async () => {
       };
 
       // Check if category already exists by slug or name
-      const existingCategory = await categoryModel.findOne({ slug: item.slug });
+      const existingCategory = await categoryModel.findOne({
+        wordPressId: item.id,
+      });
 
       if (existingCategory) {
-        await categoryModel.findByIdAndUpdate(existingCategory._id, categoryData, {
-          userId: `${process.env.WEBSITEADMIN}`,
-          context: { query: {} },
-        });
+        await categoryModel.findByIdAndUpdate(
+          existingCategory._id,
+          categoryData,
+          {
+            userId: `${process.env.WEBSITEADMIN}`,
+            context: { query: {} },
+          }
+        );
         console.log(`✅ Updated Category: ${item.name}`);
       } else {
         await categoryModel.create(categoryData);
@@ -166,9 +173,8 @@ const fetchAndStoreCategory = async () => {
   }
 };
 
-
 // ✅ Schedule the function to run every 6 hours
-cron.schedule("0 */6 * * *", () => {
+cron.schedule("* * * * *", () => {
   console.log("🔄 Running scheduled product update...");
   fetchAndStoreCategory();
 });
@@ -177,8 +183,6 @@ cron.schedule("0 */6 * * *", () => {
 fetchAndStoreCategory();
 
 const fetchAllCategory = catchAsync(async (req, res, next) => {
-
-  
   fetchAndStoreCategory();
   res.json({
     message: "Done",

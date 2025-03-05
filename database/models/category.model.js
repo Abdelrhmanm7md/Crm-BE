@@ -9,6 +9,10 @@ const categorySchema = mongoose.Schema(
       // unique: [true, "name is required"],
       required: true,
     },
+    wordPressId: {
+      type: String,
+      default: null,
+    },
     slug: {
       type: String,
     },
@@ -44,25 +48,6 @@ const categorySchema = mongoose.Schema(
   },
   { timestamps: true }
 );
-
-categorySchema.pre("save", async function (next) {
-  let check = await categoryModel.findOne({ SKU: this.SKU });
-  let check2 = await categoryModel.findOne({ name: this.name });
-  const queryData = this.$locals.queryData;
-  let err_1 = "name is already taken";
-  let err_2 = "SKU is already taken";
-  if (queryData?.lang == "ar") {
-    err_1 = "الاسم مأخوذ بالفعل";
-    err_2 = "SKU مأخوذ بالفعل";
-  }
-  if (check) {
-    return next(new Error(err_2));
-  }
-  if (check2) {
-    return next(new Error(err_1));
-  }
-  next();
-});
 
 categorySchema.pre("save", async function (next) {
   await logModel.create({

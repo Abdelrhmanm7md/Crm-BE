@@ -3,41 +3,28 @@ import { logModel } from "./log.model.js";
 
 const couponSchema = mongoose.Schema(
   {
-    wordPressId: { type: Number, unique: true }, // To prevent duplicates
+    wordPressId: { type: String,}, // To prevent duplicates
     code: {
       type: String,
       trim: true,
       required: [true, "coupon code required"],
       unique: true,
     },
-    type: {
+    discountType: {
       type: String,
-      enum: ["both", "shipping", "product","percent", "fixed_cart","fixed_product"],
+      enum: ["percent", "fixed_product"],
       required: [true, "coupon type required"],
     },
-    discount: { type: Number, required: true }, // Percentage or fixed
-    discountPercentage: {
+    amount: {
       type: Number,
-      min: 0,
-      default: 0,
-      // required: [true, "coupon discount required"],
-    },
-    expires: {
-      type: Date,
-      default: null,
-      // required: [true, "coupon date required"],
-    },
-    freeShipping: { 
-      type: Boolean, default: false 
-    },
-    nominalAmount: { type: Number, default: 0 },
-    description: {
-      type: String,
-    },
-    isValid: {
-      type: Boolean,
-      default: true,
-    },
+      required: true,
+    }, // Percentage or fixed
+    usageLimit: { type: Number, required: true }, // How many times can be used
+    usageLimitPerUser: { type: Number, required: true }, // Max number of times per user
+    freeShipping: { type: Boolean, desfault: false, required: true }, // Free shipping enabled
+    expires: { type: Date }, // Expiry date
+    excludeSaleItems: { type: Boolean, required: true }, // Cannot be used on sale items
+    minimumAmount: { type: Number, required: true }, // Minimum cart value of $50
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",

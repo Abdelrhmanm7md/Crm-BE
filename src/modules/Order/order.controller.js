@@ -10,17 +10,85 @@ import { productModel } from "../../../database/models/product.model.js";
 import { customerModel } from "../../../database/models/customer.model.js";
 import { shippingCompanyModel } from "../../../database/models/shippingCompany.model.js";
 import { couponModel } from "../../../database/models/coupon.model.js";
+import AppError from "../../utils/appError.js";
 dotenv.config();
 
 const createOrder = catchAsync(async (req, res, next) => {
-  req.body.createdBy = req.user._id;
-  let newOrder = new orderModel(req.body);
-  let addedOrder = await newOrder.save({ context: { query: req.query } });
+  try {
+    req.body.createdBy = req.user._id;
 
-  res.status(201).json({
-    message: "Order has been created successfully!",
-    addedOrder,
-  });
+    // Calculate total before discount
+    let totalBeforeDiscount = req.body.products.reduce((total, prod) => {
+      return total + prod.price * prod.quantity;
+    }, 0);
+
+    req.body.totalAmountBeforeDiscount = totalBeforeDiscount;
+
+    // Apply coupon if provided
+    if (req.body.coupon) {
+      let shippingPrice = 0;
+      const coupon = await couponModel.findById(req.body.coupon);
+      if (!coupon) return next(new AppError("Invalid coupon", 400));
+
+      const now = new Date();
+      if (coupon.expires && coupon.expires < now) {
+        return next(new AppError("Coupon expired", 400));
+      }
+
+      // Check minimum amount requirement
+      if (totalBeforeDiscount < coupon.minimumAmount) {
+        return next(
+          new AppError(
+            `Order total must be at least ${coupon.minimumAmount} to use this coupon`,
+            400
+          )
+        );
+      }
+
+      // Check global usage limit
+      const totalUsage = await orderModel.countDocuments({ coupon: req.body.coupon });
+      if (totalUsage >= coupon.usageLimit) {
+        return next(new AppError("Coupon usage limit reached", 400));
+      }
+
+      // Check per-user usage limit
+      const userUsage = await orderModel.countDocuments({ customer: req.body.customer, coupon: req.body.coupon });
+      if (userUsage >= coupon.usageLimitPerUser) {
+        return next(new AppError("User coupon limit exceeded", 400));
+      }
+
+      // Calculate discount
+      let discountAmount = 0;
+      if (coupon.discountType === "percent") {
+        discountAmount = (totalBeforeDiscount * coupon.amount) / 100;
+      } else if (coupon.discountType === "fixed_product") {
+        discountAmount = coupon.amount;
+      }
+
+      // Ensure discount doesn't exceed total amount
+      discountAmount = Math.min(discountAmount, totalBeforeDiscount);
+if(coupon.freeShipping){
+  shippingPrice = 0;
+}else{
+  shippingPrice = req.body.shippingPrice;
+}
+      // Set discounted total
+      req.body.totalAmount = totalBeforeDiscount - discountAmount + shippingPrice;
+    } else {
+      req.body.totalAmount = totalBeforeDiscount + req.body.shippingPrice;
+    }
+
+    // Create and save order
+    let newOrder = new orderModel(req.body);
+    let addedOrder = await newOrder.save({ context: { query: req.query } });
+
+    res.status(201).json({
+      message: "Order has been created successfully!",
+      addedOrder,
+    });
+  } catch (error) {
+    next(error); // Pass error to global error handler
+  }
 });
 
 const getAllOrder = catchAsync(async (req, res, next) => {
@@ -33,23 +101,6 @@ const getAllOrder = catchAsync(async (req, res, next) => {
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
-});
-const exportOrder = catchAsync(async (req, res, next) => {
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    orderModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
 });
 
 const getOrderById = catchAsync(async (req, res, next) => {
@@ -92,26 +143,99 @@ const getAllOrdersByShippingCompany = catchAsync(async (req, res, next) => {
 });
 
 const updateOrder = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
+  try {
+    const orderId = req.params.id;
+    const existingOrder = await orderModel.findById(orderId);
+    if (!existingOrder) return next(new AppError("Order not found", 404));
 
-  let updatedOrder = await orderModel.findByIdAndUpdate(id, req.body, {
-    new: true,
-    userId: req.userId,
-    context: { query: req.query },
-  });
-  let message_1 = "Couldn't update!  not found!";
-  let message_2 = "Order updated successfully!";
-  if (req.query.lang == "ar") {
-    message_1 = "تعذر التحديث! غير موجود!";
-    message_2 = "تم تحديث الطلب بنجاح!";
+    // Update createdBy if modified
+    if (req.user) {
+      req.body.createdBy = req.user._id;
+    }
+
+    // Recalculate totalBeforeDiscount if products are updated
+    if (req.body.products) {
+      req.body.totalAmountBeforeDiscount = req.body.products.reduce(
+        (total, prod) => total + prod.price * prod.quantity,
+        0
+      );
+    } else {
+      req.body.totalAmountBeforeDiscount = existingOrder.totalAmountBeforeDiscount;
+    }
+
+    let shippingPrice = req.body.shippingPrice || existingOrder.shippingPrice;
+    let discountAmount = 0;
+
+    // Apply coupon if provided
+    if (req.body.coupon) {
+      const coupon = await couponModel.findById(req.body.coupon);
+      if (!coupon) return next(new AppError("Invalid coupon", 400));
+
+      const now = new Date();
+      if (coupon.expires && coupon.expires < now) {
+        return next(new AppError("Coupon expired", 400));
+      }
+
+      // Check minimum amount requirement
+      if (req.body.totalAmountBeforeDiscount < coupon.minimumAmount) {
+        return next(
+          new AppError(
+            `Order total must be at least ${coupon.minimumAmount} to use this coupon`,
+            400
+          )
+        );
+      }
+
+      // Check global usage limit
+      const totalUsage = await orderModel.countDocuments({ coupon: req.body.coupon });
+      if (totalUsage >= coupon.usageLimit) {
+        return next(new AppError("Coupon usage limit reached", 400));
+      }
+
+      // Check per-user usage limit
+      const userUsage = await orderModel.countDocuments({
+        customer: existingOrder.customer,
+        coupon: req.body.coupon,
+      });
+      if (userUsage >= coupon.usageLimitPerUser) {
+        return next(new AppError("User coupon limit exceeded", 400));
+      }
+
+      // Calculate discount
+      if (coupon.discountType === "percent") {
+        discountAmount = (req.body.totalAmountBeforeDiscount * coupon.amount) / 100;
+      } else if (coupon.discountType === "fixed_product") {
+        discountAmount = coupon.amount;
+      }
+
+      // Ensure discount doesn't exceed total amount
+      discountAmount = Math.min(discountAmount, req.body.totalAmountBeforeDiscount);
+
+      // Apply free shipping if coupon allows
+      if (coupon.freeShipping) {
+        shippingPrice = 0;
+      }
+    }
+
+    // Calculate the final total
+    req.body.totalAmount = req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
+
+    // Update the order
+    const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
+      new: true,
+      userId: req.userId,
+      runValidators: true,
+    });
+
+    res.status(200).json({
+      message: "Order has been updated successfully!",
+      updatedOrder,
+    });
+  } catch (error) {
+    next(error); // Pass error to global error handler
   }
-
-  if (!updatedOrder) {
-    return res.status(404).json({ message: message_1 });
-  }
-
-  res.status(200).json({ message: message_2, updatedOrder });
 });
+
 const deleteOrder = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
@@ -159,117 +283,67 @@ const fetchAndStoreOrders = async () => {
     for (const item of data) {
       const existingOrder = await orderModel.findOne({ SKU: `WP-${item.id}` });
 
-      // Extract customer (fetch from DB or set to null)
+      // 🔹 Extract customer
       const customerDoc = await customerModel.findOneAndUpdate(
-        { phone: item.billing.phone }, // Search by unique phone number
+        { phone: item.billing.phone },
         {
           $setOnInsert: {
             name: `${item.billing.first_name} ${item.billing.last_name}`,
             email:
-              item.billing.email || `unknown-${item.billing.phone}@example.com`, // Ensure email
+              item.billing.email || `unknown-${item.billing.phone}@example.com`,
             phone: item.billing.phone,
             governorate: item.billing.city || "Unknown",
             country: item.billing.state || "Unknown",
             company: item.billing.company || "Unknown",
             postCode: item.billing.postcode || "Unknown",
             addresses: [
-              {
-                address: item.billing.address_1 || "Unknown Address",
-              },
-              {
-                address: item.billing.address_2 || "Unknown Address",
-              },
+              { address: item.billing.address_1 || "Unknown Address" },
+              { address: item.billing.address_2 || "Unknown Address" },
             ],
-            createdBy: new mongoose.Types.ObjectId(
-              `${process.env.WEBSITEADMIN}`
-            ),
+            createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           },
         },
-        {
-          new: true,
-          runValidators: true,
-          upsert: true,
-          userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-        } // Create if not exists
+        { new: true, runValidators: true, upsert: true }
       );
 
       const customerId = customerDoc?._id;
 
+      // 🔹 Extract shipping company
       const shippingDoc = await shippingCompanyModel.findOneAndUpdate(
-        { phone: item.shipping.phone }, // Search by unique phone number
+        { phone: item.shipping.phone },
         {
           $setOnInsert: {
             name: `${item.shipping.first_name} ${item.shipping.last_name}`,
             email:
-              item.shipping.email ||
-              `unknown-${item.shipping.phone}@example.com`, // Ensure email
+              item.shipping.email || `unknown-${item.shipping.phone}@example.com`,
             phone: item.shipping.phone,
             governorate: item.shipping.city || "Unknown",
             country: item.shipping.state || "Unknown",
             company: item.shipping.company || "Unknown",
             postCode: item.shipping.postcode || "Unknown",
             addresses: [
-              {
-                address: item.shipping.address_1 || "Unknown Address",
-              },
-              {
-                address: item.shipping.address_2 || "Unknown Address",
-              },
+              { address: item.shipping.address_1 || "Unknown Address" },
+              { address: item.shipping.address_2 || "Unknown Address" },
             ],
-            createdBy: new mongoose.Types.ObjectId(
-              `${process.env.WEBSITEADMIN}`
-            ),
+            createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           },
         },
-        {
-          new: true,
-          runValidators: true,
-          upsert: true,
-          userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-        } // Create if not exists
+        { new: true,
+           userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+          runValidators: true, upsert: true }
       );
-      
-      const shippingId = shippingDoc?._id;
-      let couponId = null;
-      const isValidDate = (date) => {
-        return date && !isNaN(new Date(date).getTime());
-      };
-      if (item.coupon_lines.length > 0) {
-        for (const coupon of item.coupon_lines) {
-          const couponDoc = await couponModel.findOneAndUpdate(
-            { code: coupon.code },
-            {
-              discount: parseFloat(coupon.discount),
-              expires: isValidDate(coupon.date_expires)
-                ? new Date(coupon.date_expires)
-                : null, // ✅ Handle invalid dates
-              description: coupon.description || "No Description",
-              type: coupon.discount_type || "percent",
-              nominalAmount: coupon.nominal_amount || 0,
-              freeShipping: coupon.free_shipping || false,
-              createdBy: new mongoose.Types.ObjectId(
-                `${process.env.WEBSITEADMIN}`
-              ),
-            },
-            {
-              new: true,
-              runValidators: true,
-              userId: new mongoose.Types.ObjectId(
-                `${process.env.WEBSITEADMIN}`
-              ),
-              upsert: true,
-            }
-          );
 
-          couponId = couponDoc?._id;
-        }
-      }
-      // Extract order products
+      const shippingId = shippingDoc?._id;
+
+      // 🔹 Extract products from order
       const orderProducts = await Promise.all(
         item.line_items.map(async (product) => {
-          const productDoc = await productModel.findOne({
-            SKU: `WP-${product.product_id}`,
-          });
+          const productDoc = await productModel.findOne({ wordPressId: product.product_id.toString() });
+
+          if (!productDoc) {
+            console.warn(`⚠️ Product not found for SKU: ${product.product_id}`);
+          }
+
           return productDoc
             ? {
                 product: productDoc._id,
@@ -281,6 +355,21 @@ const fetchAndStoreOrders = async () => {
       );
 
       const filteredProducts = orderProducts.filter((prod) => prod !== null);
+      if (filteredProducts.length === 0) {
+        console.warn(`⚠️ No valid products found for order ID: ${item.id}`);
+      }
+
+      // 🔹 Fix totalAmount parsing issue
+      const totalAmount = item.line_items.reduce((sum, lineItem) => {
+        const totalValue = Array.isArray(lineItem.total) ? lineItem.total[0] : lineItem.total;
+        const parsedValue = Number.isFinite(Number(totalValue)) ? parseFloat(totalValue) : 0;
+        
+        if (parsedValue === 0 && totalValue !== "0") {
+          console.warn(`⚠️ Skipping invalid total:`, totalValue);
+        }
+
+        return sum + parsedValue;
+      }, 0);
 
       let orderData = {
         orderNumber: item.id || " ",
@@ -290,15 +379,10 @@ const fetchAndStoreOrders = async () => {
         branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
         customer: customerId,
         customerNotes: item.customer_note,
-        coupon: couponId,
-
         address: item.shipping.address_1 || "Unknown Address",
         governorate: item.shipping.state || "Unknown",
-        totalAmountBeforeDiscount: parseFloat(Number(item.total)),
-        totalAmount: item.line_items.reduce(
-          (sum, item) => sum + parseFloat(item.total),
-          0
-        ),
+        totalAmountBeforeDiscount: parseFloat(item.total),
+        totalAmount, // 🔹 Fixed totalAmount calculation
         orderStatus: item.status,
         products: filteredProducts,
         shippingPrice: parseFloat(item.shipping_total),
@@ -307,34 +391,29 @@ const fetchAndStoreOrders = async () => {
 
       if (existingOrder) {
         await orderModel.findByIdAndUpdate(existingOrder._id, orderData, {
-          userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           runValidators: true,
+          userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           new: true,
         });
         console.log(`✅ Order updated: ${item.id}`);
       } else {
-        orderData.createdBy = new mongoose.Types.ObjectId(
-          `${process.env.WEBSITEADMIN}`
-        );
-        const newOrder = new orderModel(orderData);
-        await newOrder.save();
+        orderData.createdBy = new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`);
+        await orderModel.create(orderData);
         console.log(`✅ Order created: ${item.id}`);
       }
 
-      if (["shipping", "completed"].includes(item.status)) {
+      // 🔹 Reduce product stock if order status is "shipping"
+      if (["shipping"].includes(item.status)) {
         for (const prod of filteredProducts) {
-          // console.log(prod,"prod");
-
           await productModel.findByIdAndUpdate(
             prod.product,
-            {
-              $inc: { "store.0.quantity": -prod.quantity }, // Subtract quantity
+            { 
+              $inc: { "store.$[elem].quantity": -prod.quantity } // Subtract quantity for a specific branch 
             },
-            {
-              userId: new mongoose.Types.ObjectId(
-                `${process.env.WEBSITEADMIN}`
-              ),
+            { 
+              arrayFilters: [{ "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) }], // Select specific branch
               runValidators: true,
+              userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`)
             }
           );
         }
@@ -346,10 +425,11 @@ const fetchAndStoreOrders = async () => {
   }
 };
 
+
 // Run the function
 fetchAndStoreOrders();
 
-cron.schedule("0 */6 * * *", () => {
+cron.schedule("* * * * *", () => {
   console.log("🔄 Running scheduled product update...");
   fetchAndStoreOrders();
 });
@@ -359,7 +439,6 @@ export {
   getOrderById,
   getAllOrdersByStatus,
   getAllOrdersByShippingCompany,
-  exportOrder,
   deleteOrder,
   updateOrder,
 };

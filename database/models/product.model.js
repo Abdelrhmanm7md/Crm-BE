@@ -8,6 +8,10 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    wordPressId: {
+      type: String,
+      default: null,
+    },
     SKU: {
       type: String,
       required: true,
@@ -22,7 +26,7 @@ const productSchema = mongoose.Schema(
     },
     description: {
       type: String,
-      required: true,
+      // required: true,
     },
     brand: [
       {

@@ -10,6 +10,10 @@ const brandSchema = mongoose.Schema(
       required: true,
       minLength: [2, "too short brand name"],
     },
+    wordPressId: {
+      type: String,
+      default: null,
+    },
     slug: {
       type: String,
     },
@@ -50,19 +54,6 @@ const brandSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
-
-brandSchema.pre("save", async function (next) {
-  let check = await brandModel.findOne({ SKU: this.SKU });
-  const queryData = this.$locals.queryData;
-  let err_2 = "SKU is already taken";
-  if (queryData?.lang == "ar") {
-    err_2 = "SKU مأخوذ بالفعل";
-  }
-  if (check) {
-    return next(new Error(err_2));
-  }
-  next();
-});
 
 brandSchema.pre("save", async function (next) {
   await logModel.create({
