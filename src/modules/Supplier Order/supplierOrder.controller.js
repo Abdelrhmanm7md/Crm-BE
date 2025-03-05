@@ -15,6 +15,17 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
         { new: true ,userId: req.userId, context: { query: req.query } }
       );
     }
+    req.body.totalAmount = order.products.reduce((acc, product) => {
+      return acc + product.price * product.quantity;
+    }, 0);
+
+    req.body.timeTablePayment.forEach((payment) => {
+      req.body.paidPayment += payment.amount
+    })
+    req.body.remainingPayment = req.body.totalAmount - req.body.paidPayment
+    if(req.body.paidPayment > req.body.totalAmount){
+      return res.status(400).json({ message: "paidPayment should be less than totalAmount" });
+    }
     res.status(201).json({
       message: "SupplierOrder has been created successfully!",
       addedSupplierOrder,
@@ -67,7 +78,7 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
     // ✅ Check if products changed
     const productsChanged = JSON.stringify(order.products) !== JSON.stringify(products);
     
-    if (productsChanged && req.body.products ) {
+    if ((productsChanged && req.body.products) || req.body.timeTablePayment  ) {
       const revertUpdates = order.products.map(item =>
         productModel.findOneAndUpdate(
           { _id: item.product, "store.branch": item.branch },

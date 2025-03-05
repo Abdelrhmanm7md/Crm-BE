@@ -1,7 +1,7 @@
 import { capitalModel } from "../../../database/models/capital.model.js";
+import { orderModel } from "../../../database/models/order.model.js";
 import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createCapital = catchAsync(async (req, res, next) => {  
@@ -24,6 +24,7 @@ const amountResult = await productModel.aggregate([
     {
       $group: {
         _id: null,
+        productsCount: { $sum: 1 },
         totalAmount: {
           $sum: {
             $subtract: [
@@ -47,19 +48,50 @@ const amountResult = await productModel.aggregate([
       },
     },
   ]);
-  let amount = amountResult[0]?.totalAmount
   const productsData = {
     reason : "Products",
-    amount : amount,
+    amount : amountResult[0]?.totalAmount,
+    productsCount : amountResult[0]?.productsCount,
     totalCostPrice : amountResult[0]?.totalCostPrice,
     totalSellingPrice : amountResult[0]?.totalSellingPrice
   }
 
-  results.push(productsData)
-  let totalProfit = results.reduce((total, item) => {
+  const orderResult = await orderModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalOrders: { $sum: 1 },
+        completedOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "completed"] }, 1, 0] },
+        }, 
+        totalCompletedAmount: {
+          $sum: {
+            $cond: [
+              { $eq: ["$orderStatus", "completed"] }, 
+              { $subtract: ["$totalAmount", "$shippingPrice"] }, 
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ]);
+  
+  const ordersData = {
+    reason : "Orders",
+    amount : orderResult[0]?.totalCompletedAmount,
+    completedOrdersCount : orderResult[0]?.completedOrders,
+  }
+
+  results.push(ordersData)
+  let realTotalProfit = results.reduce((total, item) => {
     return total + (item.amount || 0); 
   }, 0);
-  res.json({ message: "Done",totalProfit , results });
+  results.push(productsData)
+  let expectedTotalProfit = results.reduce((total, item) => {
+    return total + (item.amount || 0); 
+  }, 0);
+  res.json({ message: "Done",expectedTotalProfit,realTotalProfit , results });
 
 });
 

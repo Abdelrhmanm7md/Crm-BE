@@ -36,13 +36,39 @@ try{
   results.shippingCompanyCount = await shippingCompanyModel.countDocuments();  
   results.suppliersCount = await supplierModel.countDocuments();  
   results.customersCount = await customerModel.countDocuments();  
-  results.usersCount = await userModel.countDocuments();  
+  results.usersCount = await userModel.countDocuments();
+  const orderResult = await orderModel.aggregate([
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" },
+        }, // Group by year and month
+        totalOrders: { $sum: 1 }, // Count total orders
+        completedOrders: {
+          $sum: { $cond: [{ $eq: ["$orderStatus", "completed"] }, 1, 0] },
+        }, // Count only completed orders
+        totalCompletedAmount: {
+          $sum: {
+            $cond: [
+              { $eq: ["$orderStatus", "completed"] },
+              { $subtract: ["$totalAmount", "$shippingPrice"] },
+              0,
+            ],
+          },
+        }, 
+      },
+    },
+    // {
+    //   $sort: { "_id.year": 1, "_id.month": 1 },
+    // },
+  ]);
+    results.orderResult = orderResult
   results = { ...results, ...orderStats };
 }catch(err){
   return res.status(400).json({ message: err.message });
 }
   res.json({ message: "Done", results });
-
 });
 
 
