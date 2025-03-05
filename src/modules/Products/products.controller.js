@@ -450,7 +450,7 @@ const fetchAndStoreProducts = async () => {
           : 0,
         sellingPrice: parseFloat(item.price) || 0,
         salePrice: parseFloat(item.sale_price) || null,
-
+        fromWordPress: true,
       };
 
       const storeEntry = {

@@ -399,6 +399,7 @@ const fetchAndStoreOrders = async () => {
         totalAmount, // 🔹 Fixed totalAmount calculation
         orderStatus: item.status,
         products: filteredProducts,
+        fromWordPress : true,
         shippingPrice: parseFloat(item.shipping_total),
         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
       };

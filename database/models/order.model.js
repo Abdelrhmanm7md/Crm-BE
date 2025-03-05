@@ -1,7 +1,6 @@
 import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
-import { couponModel } from "./coupon.model.js";
 import AppError from "../../src/utils/appError.js";
 
 const orderSchema = mongoose.Schema(
@@ -293,7 +292,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   
   const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
   const willProcessNow = ["shipping"].includes(update.orderStatus);
-  if (order.orderStatus === "completed") {
+  if (order.orderStatus === "completed" && order.fromWordPress == false) {
     return next(new AppError("Order is already completed", 400));
   }
 

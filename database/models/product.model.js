@@ -16,10 +16,6 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    wordPressId: {
-      type: String,
-      default:null,
-    },
     shortDescription: {
       type: String,
       // required: true,
@@ -97,16 +93,10 @@ const productSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    // discountPrice: {
-    //   type: Number,
-    //   required: true,
-    //   default: 0,
-    // },
-    // discountPercentage: {
-    //   type: Number,
-    //   required: true,
-    //   default: 0,
-    // },
+    fromWordPress: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
