@@ -382,7 +382,7 @@ const fetchAndStoreOrders = async () => {
           console.warn(`⚠️ Skipping invalid total:`, totalValue);
         }
 
-        return sum + parsedValue;
+        return sum + parsedValue ;
       }, 0);
 
       let orderData = {
@@ -395,8 +395,8 @@ const fetchAndStoreOrders = async () => {
         customerNotes: item.customer_note,
         address: item.shipping.address_1 || "Unknown Address",
         governorate: item.shipping.state || "Unknown",
-        totalAmountBeforeDiscount: parseFloat(item.total),
-        totalAmount, // 🔹 Fixed totalAmount calculation
+        totalAmountBeforeDiscount: totalAmount,
+        totalAmount : totalAmount + parseFloat(item.shipping_total), // 🔹 Fixed totalAmount calculation
         orderStatus: item.status,
         products: filteredProducts,
         fromWordPress : true,

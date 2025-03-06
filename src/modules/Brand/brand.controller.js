@@ -148,6 +148,7 @@ const fetchAndStoreBrand = async () => {
   console.log(`✅ Fetched ${allBrands.length} brands from WooCommerce`);
     for (const item of allBrands) {
       const BrandData = {
+        wordPressId: item.id,
         name: item.name,
         slug: item.slug,
         SKU: item.id.toString(),

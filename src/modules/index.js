@@ -4,7 +4,6 @@ import capitalRouter from "./Capital/capital.routes.js";
 import categoryRouter from "./Category/category.routes.js";
 import customerRouter from "./Customer/customer.routes.js";
 import expensesRouter from "./expenses/expenses.routes.js";
-import notiticationRouter from "./Notification/notification.routes.js";
 import orderRouter from "./Order/order.routes.js";
 import productRouter from "./Products/products.routes.js";
 import salaryRouter from "./Salary/salary.routes.js";
@@ -19,7 +18,6 @@ import statsRouter from "./Stats/stats.routes.js";
 export function init(app) {
   app.use("/api/v1/users", usersRouter);
   app.use("/api/v1/auth", authRouter);
-  app.use("/api/v1/notification", notiticationRouter);
   app.use("/api/v1/customer", customerRouter);
   app.use("/api/v1/product", productRouter);
   app.use("/api/v1/brand", brandRouter);

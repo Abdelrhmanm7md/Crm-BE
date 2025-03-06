@@ -4,7 +4,7 @@ import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import AppError from "../../utils/appError.js";
 import { userModel } from "../../../database/models/user.model.js";
 import generateUniqueId from "generate-unique-id";
-import { sendEmail } from "../../email/sendEmail.js";
+// import { sendEmail } from "../../email/sendEmail.js";
 import { logModel } from "../../../database/models/log.model.js";
 
 export const signUp = catchAsync(async (req, res, next) => {
@@ -124,7 +124,7 @@ export const forgetPassword = catchAsync(async (req, res, next) => {
       useLetters: false,
     });
     text += `${userData.verificationCode}`;
-    sendEmail(userData.email, text);
+    // sendEmail(userData.email, text);
     await userData.save();
     let verificationCode = userData.verificationCode;
     let id = userData._id;

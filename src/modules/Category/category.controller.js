@@ -151,6 +151,7 @@ const fetchAndStoreCategory = async () => {
   console.log(`✅ Fetched ${allCate.length} Categories from WooCommerce`);
     for (const item of allCate) {
       const categoryData = {
+        wordPressId: item.id,
         name: item.name,
         slug: item.slug,
         SKU: item.id.toString(),

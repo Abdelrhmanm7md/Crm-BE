@@ -292,9 +292,6 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   
   const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
   const willProcessNow = ["shipping"].includes(update.orderStatus);
-  if (order.orderStatus === "completed" && order.fromWordPress == false) {
-    return next(new AppError("Order is already completed", 400));
-  }
 
   if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
     for (const item of order.products) {
