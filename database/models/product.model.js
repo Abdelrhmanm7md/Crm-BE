@@ -81,8 +81,14 @@ const productSchema = mongoose.Schema(
       default:null,
       // required: true,
     },
+    totalQuantity: {
+      type: Number,
+      default:0,
+      // required: true,
+    },
     costPrice: {
       type: Number,
+      default:null,
       required: true,
     },
     salePrice: {
@@ -91,8 +97,54 @@ const productSchema = mongoose.Schema(
     },
     sellingPrice: {
       type: Number,
+      default:null,
       required: true,
     },
+    productVariations:
+    [
+      {
+        regularPrice: {
+          type: Number,
+          default:null,
+          // required: true,
+        },
+        salePrice: {
+          type: Number,
+          default:null,
+          // required: true,
+        },
+        quantity: {
+          type: Number,
+          // required: true,
+        },
+        photo: {
+          type: String,
+          // required: true,
+        },
+        color: {
+          type: String,
+          // required: true,
+        },
+        size: {
+          type: [String],
+          // required: true,
+        },
+        weight:{
+          type: String,
+          // required: true,
+        },
+        dimensions: {
+          length: { type: String,  },
+          width: { type: String,  },
+          height: { type: String, },
+        },
+        branch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "branch",
+          required: true,
+        },
+      },
+    ],
     fromWordPress: {
       type: Boolean,
       default: false,
@@ -216,7 +268,11 @@ productSchema.pre(
 
 productSchema.post("find", function (docs) {
   docs.forEach((doc) => {
-    doc.totalQuantity = doc.store.reduce((sum, storeItem) => sum + storeItem.quantity, 0);
+    if (doc.productVariations?.length > 0) {
+      doc.totalQuantity = doc.productVariations.reduce((sum, variation) => sum + (variation.quantity || 0), 0);
+    } else {
+      doc.totalQuantity = doc.store?.reduce((sum, storeItem) => sum + (storeItem.quantity || 0), 0);
+    }
   });
 });
 productSchema.pre(/^find/, function () {

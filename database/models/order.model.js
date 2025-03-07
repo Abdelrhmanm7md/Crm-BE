@@ -55,7 +55,7 @@ const orderSchema = mongoose.Schema(
     totalAmountBeforeDiscount: {
       type: Number,
       default: 0,
-      required: true,  // before apply coupon
+      required: true, // before apply coupon
     },
     totalAmount: {
       type: Number,
@@ -74,7 +74,7 @@ const orderSchema = mongoose.Schema(
         "cancelled",
         "refunded",
         "failed",
-        "checkout-draft"
+        "checkout-draft",
       ],
       default: "processing",
       required: true,
@@ -98,9 +98,32 @@ const orderSchema = mongoose.Schema(
         },
       ],
     },
+    productVariations: {
+     type: [{
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "product",
+          // required: true,
+        },
+        quantity: {
+          type: Number,
+          // required: true,
+        },
+        color: {
+          type: String,
+          // required: true,
+        },
+        size: {
+          type: [String],
+          // required: true,
+        },
+        },
+      ],
+      default: [],
+      },
     shippingPrice: {
       type: Number,
-      default:0,
+      default: 0,
       required: true,
     },
     fromWordPress: {
@@ -152,13 +175,13 @@ orderSchema.pre("save", async function (next) {
       }
       const queryData = this.$locals.queryData;
       let err_1 = `Product with ID ${item.product} not found.`;
-      let err_2 = `Branch ${this.branch} not found for product: ${product.name}`
-      let err_3 = `Insufficient quantity for product: ${product.name}`
+      let err_2 = `Branch ${this.branch} not found for product: ${product.name}`;
+      let err_3 = `Insufficient quantity for product: ${product.name}`;
 
       if (queryData?.lang == "ar") {
         err_1 = `هذا الصنف غير موجود${item.product}!`;
         err_2 = `هناك مخزون (ات) غير موجود`;
-        err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`
+        err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`;
       }
 
       const storeItem = product.store.find(
@@ -166,15 +189,15 @@ orderSchema.pre("save", async function (next) {
       );
 
       if (!storeItem) {
-        throw new Error(
-          `${err_2}`
-        );
+        throw new Error(`${err_2}`);
       }
 
-      // if (storeItem.quantity < item.quantity) {
-      //   throw new Error(`${err_3}`);
-      // }
-
+      if (
+        storeItem.quantity < item.quantity &&
+        product.fromWordPress == false
+      ) {
+        throw new Error(`${err_3}`);
+      }
     }
 
     next();
@@ -238,15 +261,14 @@ orderSchema.pre(
   }
 );
 
-
 orderSchema.pre("findOneAndUpdate", async function (next) {
   const Product = mongoose.model("product");
-  
+
   // Use this.getQuery() to access the query
   const queryData = this.getQuery();
   const update = this.getUpdate();
   const { products, branch, orderStatus } = update;
-  
+
   if (!products || !branch || !orderStatus) {
     return next();
   }
@@ -274,6 +296,13 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
       if (!storeItem) {
         throw new Error(err_2);
       }
+
+      if (
+        storeItem.quantity < item.quantity &&
+        product.fromWordPress == false
+      ) {
+        throw new Error(err_3);
+      }
     }
 
     next();
@@ -282,41 +311,64 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   }
 });
 
-
 orderSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
-  
+
   const order = await this.model.findOne(this.getQuery()).lean();
   if (!order) return next();
-  
+
   const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
   const willProcessNow = ["shipping"].includes(update.orderStatus);
 
   if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
     for (const item of order.products) {
       const product = await mongoose.model("product").findById(item.productId);
-      if (product) {
-        product.store.forEach(storeItem => {
-          if (storeItem.branch.toString() === item.branchId.toString()) {
-            if (storeItem.quantity >= item.quantity) {
-              storeItem.quantity -= item.quantity;
-            } else {
-              throw new Error(`Not enough stock for product ${product.name}`);
-            }
+      if (!product) continue;
+      if(order.fromWordPress == false){
+
+        if ((!order.productVariations || order.productVariations.length === 0) ) {
+          product.store.forEach((storeItem) => {
+            if (storeItem.branch.toString() === item.branchId.toString()) {
+              if (storeItem.quantity >= item.quantity) {
+                storeItem.quantity -= item.quantity;
+              } else {
+                throw new Error(`Not enough stock for product ${product.name}`);
+              }
           }
         });
-              await product.updateOne(
-        { _id: item.product, "store.branch": this.branch },
-        { $inc: { "store.$.quantity": -item.quantity } },
-        { userId: this.options.userId }
-      );
+
+        await product.updateOne(
+          { _id: item.productId, "store.branch": item.branchId },
+          { $inc: { "store.$.quantity": -item.quantity } },
+          { userId: this.options.userId }
+        );
+      } else {
+        // If productVariations exist, decrease stock from productVariations.quantity
+        for (const variation of order.productVariations) {
+          await mongoose.model("product").findOneAndUpdate(
+            {
+              _id: variation.product,
+              "productVariations.color": variation.color,
+              "productVariations.size": { $in: variation.size },
+              "productVariations.branch": variation.branch
+            },
+            {
+              $inc: { "productVariations.$.quantity": -variation.quantity }
+            },
+            {
+              userId: this.options.userId
+            }
+          );
+        }
+      }
       }
     }
   }
 
   next();
 });
+
 
 orderSchema.pre(/^find/, function () {
   this.populate({ path: "products.product" });

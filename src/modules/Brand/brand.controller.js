@@ -125,6 +125,7 @@ const fetchAndStoreBrand = async () => {
         params: {
           per_page: 100, // Maximum limit per request (adjust as needed)
           page: page,
+          // status: ["any"]
         },
         auth: {
           username: process.env.CONSUMERKEY,
@@ -143,7 +144,7 @@ const fetchAndStoreBrand = async () => {
     totalFetched = data.length;
     allBrands.push(...data);
     page++;
-  } while (totalFetched === 100); // Continue fetching until no more products
+  } while (totalFetched > 0); // Continue fetching until no more products
 
   console.log(`✅ Fetched ${allBrands.length} brands from WooCommerce`);
     for (const item of allBrands) {

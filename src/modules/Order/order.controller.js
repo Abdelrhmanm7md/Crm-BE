@@ -258,42 +258,229 @@ const deleteOrder = catchAsync(async (req, res, next) => {
   res.status(200).json({ message: message_2 });
 });
 
+// const fetchAndStoreOrders = async () => {
+//   try {
+//     console.log("⏳ Fetching orders from WooCommerce API...");
+//     let page = 1;
+//     let allOrders = [];
+//     let totalFetched = 0;
+//     do {
+
+    
+//     const { data } = await axios.get(
+//       "https://a2mstore.com/wp-json/wc/v3/orders",
+//       {
+//         params: {
+//           per_page: 100, // Maximum limit per request (adjust as needed)
+//           page: page,
+//         },
+//         auth: {
+//           username: process.env.CONSUMERKEY,
+//           password: process.env.CONSUMERSECRET,
+//         },
+//         headers: {
+//           Authorization:
+//             "Basic " +
+//             Buffer.from(
+//               `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+//             ).toString("base64"),
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+//     totalFetched = data.length;
+//     allOrders.push(...data);
+//     page++;
+//   } while (totalFetched === 10000); // Continue fetching until no more allOrders
+
+//   console.log(`✅ Fetched ${allOrders.length} Orders from WooCommerce`);
+//     for (const item of allOrders) {
+//       const existingOrder = await orderModel.findOne({ SKU: `WP-${item.id}` });
+
+//       // 🔹 Extract customer
+//       const customerDoc = await customerModel.findOneAndUpdate(
+//         { phone: item.billing.phone },
+//         {
+//           $setOnInsert: {
+//             name: `${item.billing.first_name} ${item.billing.last_name}`,
+//             email:
+//               item.billing.email || `unknown-${item.billing.phone}@example.com`,
+//             phone: item.billing.phone,
+//             governorate: item.billing.city || "Unknown",
+//             country: item.billing.state || "Unknown",
+//             company: item.billing.company || "Unknown",
+//             postCode: item.billing.postcode || "Unknown",
+//             addresses: [
+//               { address: item.billing.address_1 || "Unknown Address" },
+//               { address: item.billing.address_2 || "Unknown Address" },
+//             ],
+//             createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+//           },
+//         },
+//         { new: true, runValidators: true, upsert: true }
+//       );
+
+//       const customerId = customerDoc?._id;
+
+//       // 🔹 Extract shipping company
+//       const shippingDoc = await shippingCompanyModel.findOneAndUpdate(
+//         { phone: item.shipping.phone },
+//         {
+//           $setOnInsert: {
+//             name: `${item.shipping.first_name} ${item.shipping.last_name}`,
+//             email:
+//               item.shipping.email || `unknown-${item.shipping.phone}@example.com`,
+//             phone: item.shipping.phone,
+//             governorate: item.shipping.city || "Unknown",
+//             country: item.shipping.state || "Unknown",
+//             company: item.shipping.company || "Unknown",
+//             postCode: item.shipping.postcode || "Unknown",
+//             addresses: [
+//               { address: item.shipping.address_1 || "Unknown Address" },
+//               { address: item.shipping.address_2 || "Unknown Address" },
+//             ],
+//             createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+//           },
+//         },
+//         { new: true,
+//            userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+//           runValidators: true, upsert: true }
+//       );
+
+//       const shippingId = shippingDoc?._id;
+
+//       // 🔹 Extract products from order
+//       const orderProducts = await Promise.all(
+//         item.line_items.map(async (product) => {
+//           const productDoc = await productModel.findOne({ wordPressId: product.product_id.toString() });
+
+//           if (!productDoc) {
+//             console.warn(`⚠️ Product not found for SKU: ${product.product_id}`);
+//           }
+
+//           return productDoc
+//             ? {
+//                 product: productDoc._id,
+//                 quantity: product.quantity,
+//                 price: parseFloat(product.price),
+//               }
+//             : null;
+//         })
+//       );
+
+//       const filteredProducts = orderProducts.filter((prod) => prod !== null);
+//       if (filteredProducts.length === 0) {
+//         console.warn(`⚠️ No valid products found for order ID: ${item.id}`);
+//       }
+
+//       // 🔹 Fix totalAmount parsing issue
+//       const totalAmount = item.line_items.reduce((sum, lineItem) => {
+//         const totalValue = Array.isArray(lineItem.total) ? lineItem.total[0] : lineItem.total;
+//         const parsedValue = Number.isFinite(Number(totalValue)) ? parseFloat(totalValue) : 0;
+        
+//         if (parsedValue === 0 && totalValue !== "0") {
+//           console.warn(`⚠️ Skipping invalid total:`, totalValue);
+//         }
+
+//         return sum + parsedValue ;
+//       }, 0);
+
+//       let orderData = {
+//         orderNumber: item.id || " ",
+//         SKU: `WP-${item.id}`,
+//         supplier: null,
+//         shippingCompany: shippingId,
+//         branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+//         customer: customerId,
+//         customerNotes: item.customer_note,
+//         address: item.shipping.address_1 || "Unknown Address",
+//         governorate: item.shipping.state || "Unknown",
+//         totalAmountBeforeDiscount: totalAmount,
+//         totalAmount : totalAmount + parseFloat(item.shipping_total), // 🔹 Fixed totalAmount calculation
+//         orderStatus: item.status,
+//         products: filteredProducts,
+//         fromWordPress : true,
+//         shippingPrice: parseFloat(item.shipping_total),
+//         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+//       };
+
+//       if (existingOrder) {
+//         await orderModel.findByIdAndUpdate(existingOrder._id, orderData, {
+//           runValidators: true,
+//           userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+//           new: true,
+//         });
+//         console.log(`✅ Order updated: ${item.id}`);
+//       } else {
+//         orderData.createdBy = new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`);
+//         await orderModel.create(orderData);
+//         console.log(`✅ Order created: ${item.id}`);
+//       }
+
+//       // 🔹 Reduce product stock if order status is "shipping"
+//       if (["shipping"].includes(item.status)) {
+//         for (const prod of filteredProducts) {
+//           await productModel.findByIdAndUpdate(
+//             prod.product,
+//             { 
+//               $inc: { "store.$[elem].quantity": -prod.quantity } // Subtract quantity for a specific branch 
+//             },
+//             { 
+//               arrayFilters: [{ "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) }], // Select specific branch
+//               runValidators: true,
+//               userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`)
+//             }
+//           );
+//         }
+//       }
+//     }
+//     console.log("✅ Orders updated successfully!");
+//   } catch (error) {
+//     console.error("❌ Error fetching orders:", error.message);
+//   }
+// };
+
+
+// Run the function
+
+
 const fetchAndStoreOrders = async () => {
   try {
     console.log("⏳ Fetching orders from WooCommerce API...");
     let page = 1;
     let allOrders = [];
     let totalFetched = 0;
-    do {
-
     
-    const { data } = await axios.get(
-      "https://a2mstore.com/wp-json/wc/v3/orders",
-      {
-        params: {
-          per_page: 100, // Maximum limit per request (adjust as needed)
-          page: page,
-        },
-        auth: {
-          username: process.env.CONSUMERKEY,
-          password: process.env.CONSUMERSECRET,
-        },
-        headers: {
-          Authorization:
-            "Basic " +
-            Buffer.from(
-              `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
-            ).toString("base64"),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    totalFetched = data.length;
-    allOrders.push(...data);
-    page++;
-  } while (totalFetched === 100); // Continue fetching until no more allOrders
+    do {
+      const { data } = await axios.get(
+        "https://a2mstore.com/wp-json/wc/v3/orders",
+        {
+          params: {
+            per_page: 100,
+            page: page,
+          },
+          auth: {
+            username: process.env.CONSUMERKEY,
+            password: process.env.CONSUMERSECRET,
+          },
+          headers: {
+            Authorization:
+              "Basic " +
+              Buffer.from(
+                `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+              ).toString("base64"),
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  console.log(`✅ Fetched ${allOrders.length} Orders from WooCommerce`);
+      totalFetched = data.length;
+      allOrders.push(...data);
+      page++;
+    } while (totalFetched > 0);
+
+    console.log(`✅ Fetched ${allOrders.length} Orders from WooCommerce`);
+
     for (const item of allOrders) {
       const existingOrder = await orderModel.findOne({ SKU: `WP-${item.id}` });
 
@@ -317,7 +504,7 @@ const fetchAndStoreOrders = async () => {
             createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           },
         },
-        { new: true, runValidators: true, upsert: true }
+        { new: true,userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`), runValidators: true, upsert: true }
       );
 
       const customerId = customerDoc?._id;
@@ -342,35 +529,59 @@ const fetchAndStoreOrders = async () => {
             createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           },
         },
-        { new: true,
-           userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-          runValidators: true, upsert: true }
+        { new: true,userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`), runValidators: true, upsert: true }
       );
 
       const shippingId = shippingDoc?._id;
 
-      // 🔹 Extract products from order
-      const orderProducts = await Promise.all(
-        item.line_items.map(async (product) => {
-          const productDoc = await productModel.findOne({ wordPressId: product.product_id.toString() });
+      // 🔹 Extract products and variations
+      const orderProducts = [];
+      const productVariations = [];
 
-          if (!productDoc) {
-            console.warn(`⚠️ Product not found for SKU: ${product.product_id}`);
-          }
+      for (const product of item.line_items) {
+        const productDoc = await productModel.findOne({
+          wordPressId: product.product_id.toString(),
+        });
 
-          return productDoc
-            ? {
-                product: productDoc._id,
-                quantity: product.quantity,
-                price: parseFloat(product.price),
-              }
-            : null;
-        })
-      );
+        if (!productDoc) {
+          console.warn(`⚠️ Product not found for SKU: ${product.product_id}`);
+          continue;
+        }
 
-      const filteredProducts = orderProducts.filter((prod) => prod !== null);
-      if (filteredProducts.length === 0) {
-        console.warn(`⚠️ No valid products found for order ID: ${item.id}`);
+        // Extract variation details from meta_data
+        let color = "";
+        let size = [];
+        let photo = "";
+
+        if (product.meta_data) {
+          product.meta_data.forEach((meta) => {
+            if (meta.key.toLowerCase().includes("color")) {
+              color = meta.value;
+            } else if (meta.key.toLowerCase().includes("size")) {
+              size.push(meta.value);
+            } else if (meta.key.toLowerCase().includes("image")) {
+              photo = meta.value;
+            }
+          });
+        }
+
+        if (color || size.length > 0 || photo) {
+          // This is a variation product
+          productVariations.push({
+            product: productDoc._id,
+            quantity: product.quantity,
+            color,
+            size,
+            photo,
+          });
+        } else {
+          // Regular product
+          orderProducts.push({
+            product: productDoc._id,
+            quantity: product.quantity,
+            price: parseFloat(product.price),
+          });
+        }
       }
 
       // 🔹 Fix totalAmount parsing issue
@@ -396,10 +607,11 @@ const fetchAndStoreOrders = async () => {
         address: item.shipping.address_1 || "Unknown Address",
         governorate: item.shipping.state || "Unknown",
         totalAmountBeforeDiscount: totalAmount,
-        totalAmount : totalAmount + parseFloat(item.shipping_total), // 🔹 Fixed totalAmount calculation
+        totalAmount : totalAmount + parseFloat(item.shipping_total),
         orderStatus: item.status,
-        products: filteredProducts,
-        fromWordPress : true,
+        products: orderProducts,
+        productVariations: productVariations,
+        fromWordPress: true,
         shippingPrice: parseFloat(item.shipping_total),
         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
       };
@@ -419,21 +631,45 @@ const fetchAndStoreOrders = async () => {
 
       // 🔹 Reduce product stock if order status is "shipping"
       if (["shipping"].includes(item.status)) {
-        for (const prod of filteredProducts) {
-          await productModel.findByIdAndUpdate(
-            prod.product,
-            { 
-              $inc: { "store.$[elem].quantity": -prod.quantity } // Subtract quantity for a specific branch 
-            },
-            { 
-              arrayFilters: [{ "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) }], // Select specific branch
-              runValidators: true,
-              userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`)
+        for (const prod of orderProducts) {
+          if (!orderData.productVariations || orderData.productVariations.length === 0) {
+            // If productVariations is empty, decrease stock from store.quantity
+            await productModel.findByIdAndUpdate(
+              prod.product,
+              {
+                $inc: { "store.$[elem].quantity": -prod.quantity }
+              },
+              {
+                arrayFilters: [{ "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) }],
+                runValidators: true,
+                userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+              }
+            );
+          } else {
+            // If productVariations exist, decrease stock from productVariations.quantity
+            for (const variation of orderData.productVariations) {
+              await productModel.findOneAndUpdate(
+                {
+                  _id: variation.product,
+                  "productVariations.color": variation.color,
+                  "productVariations.size": { $in: variation.size },
+                  "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID)
+                },
+                {
+                  $inc: { "productVariations.$.quantity": -variation.quantity }
+                },
+                {
+                  arrayFilters: [],
+                  runValidators: true,
+                  userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`)
+                }
+              );
             }
-          );
+          }
         }
       }
     }
+
     console.log("✅ Orders updated successfully!");
   } catch (error) {
     console.error("❌ Error fetching orders:", error.message);
@@ -441,7 +677,7 @@ const fetchAndStoreOrders = async () => {
 };
 
 
-// Run the function
+
 fetchAndStoreOrders();
 
 cron.schedule("* * * * *", () => {

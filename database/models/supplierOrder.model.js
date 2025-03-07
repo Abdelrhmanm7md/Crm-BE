@@ -46,6 +46,46 @@ const supplierOrderSchema = mongoose.Schema(
             },
           },
         ],
+        productVariations:
+            [
+              {
+                product: {
+                  type: mongoose.Schema.Types.ObjectId,
+                  ref: "product",
+                  // required: true,
+                },
+                quantity: {
+                  type: Number,
+                  // required: true,
+                },
+                photo: {
+                  type: String,
+                  // required: true,
+                },
+                color: {
+                  type: String,
+                  // required: true,
+                },
+                size: {
+                  type: [String],
+                  // required: true,
+                },
+                weight:{
+                  type: String,
+                  // required: true,
+                },
+                dimensions: {
+                  length: { type: String,  },
+                  width: { type: String,  },
+                  height: { type: String, },
+                },
+                branch: {
+                  type: mongoose.Schema.Types.ObjectId,
+                  ref: "branch",
+                  // required: true,
+                },
+              },
+            ],
     notes: {
       type: String,
     },

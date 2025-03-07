@@ -128,6 +128,7 @@ const fetchAndStoreCategory = async () => {
         params: {
           per_page: 100, // Maximum limit per request (adjust as needed)
           page: page,
+          // status: ["any"]
         },
         auth: {
           username: process.env.CONSUMERKEY,
@@ -146,7 +147,7 @@ const fetchAndStoreCategory = async () => {
     totalFetched = data.length;
     allCate.push(...data);
     page++;
-  } while (totalFetched === 100); 
+  } while (totalFetched > 0); 
 
   console.log(`✅ Fetched ${allCate.length} Categories from WooCommerce`);
     for (const item of allCate) {

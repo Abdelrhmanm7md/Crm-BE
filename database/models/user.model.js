@@ -115,13 +115,6 @@ userSchema.pre(
   }
 );
 
-// userSchema.pre(/^delete/, { document: false, query: true }, async function () {
-//   const doc = await this.model.findOne(this.getFilter());
-//   if (doc) {
-//     doc.profilePic && removeFile("profilePic", doc.profilePic);
-
-//   }
-// });
 // userSchema.pre(/^find/, function () {
 // });
 export const userModel = mongoose.model("user", userSchema);

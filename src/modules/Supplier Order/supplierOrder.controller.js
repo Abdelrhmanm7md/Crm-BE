@@ -10,19 +10,56 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
 
-      let products = req.body.products || []; // Ensure products is an array
+      let products = req.body.products || []; 
       for (const item of products) {
+        await productModel.findOneAndUpdate(
+          { _id: item.product, "store.branch": item.branch },
+          { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
+          { new: true , userId: req.user._id }
+        );
+      }
+      let productVariations = req.body.productVariations || [];
+      for (const variation of productVariations) {
+        
+        variation.dimensions = {
+          length: (variation.dimensions?.length) || 0,
+          width: (variation.dimensions?.width) || 0,
+          height: (variation.dimensions?.height) || 0,
+        };
+
+        variation.weight = (variation.weight) || 0;
+
+        const existingProduct = await productModel.findOne({
+          _id: variation.product,
+          "productVariations.color": variation.color,
+          "productVariations.size": { $in: variation.size },
+          "productVariations.branch": variation.branch
+        });
+
+        if (existingProduct) {
           await productModel.findOneAndUpdate(
-              { _id: item.product, "store.branch": item.branch },
-              { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
-              { new: true, userId: req.userId, context: { query: req.query } }
+            {
+              _id: variation.product,
+              "productVariations.color": variation.color,
+              "productVariations.size": { $in: variation.size },
+              "productVariations.branch": variation.branch
+            },
+            { $inc: { "productVariations.$.quantity": variation.quantity } },
+            { new: true, userId: req.user._id }
           );
+        } else {
+          await productModel.findOneAndUpdate(
+            { _id: variation.product },
+            { $push: { productVariations: variation } },
+            { new: true, userId: req.user._id }
+          );
+        }
       }
 
       // Calculate totalAmount
-      req.body.totalAmount = products.reduce((acc, product) => {
-          return acc + (product.price || 0) * (product.quantity || 0);
-      }, 0);
+      // req.body.totalAmount = products.reduce((acc, product) => {
+      //     return acc + (product.price || 0) * (product.quantity || 0);
+      // }, 0);
 
       // Ensure paidPayment starts from 0
       req.body.paidPayment = 0;
@@ -93,10 +130,7 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
     const { products, timeTablePayment } = req.body;
 
     if (timeTablePayment) {
-      // Calculate totalAmount
 
-
-      // Ensure paidPayment starts from 0
       req.body.paidPayment = 0;
 
       timeTablePayment.forEach((payment) => {
