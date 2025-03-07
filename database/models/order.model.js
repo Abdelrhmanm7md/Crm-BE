@@ -291,14 +291,14 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
       }
 
       const storeItem = product.store.find(
-        (store) => String(store.branch._id) === String(branch)
+        (store) => String(store.branch) === String(branch)
       );
-      if (!storeItem) {
+      if (!storeItem && product.fromWordPress == false) {
         throw new Error(err_2);
       }
 
       if (
-        storeItem.quantity < item.quantity &&
+        storeItem?.quantity < item.quantity &&
         product.fromWordPress == false
       ) {
         throw new Error(err_3);

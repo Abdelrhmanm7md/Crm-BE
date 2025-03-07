@@ -672,7 +672,7 @@ const fetchAndStoreOrders = async () => {
 
     console.log("✅ Orders updated successfully!");
   } catch (error) {
-    console.error("❌ Error fetching orders:", error.message);
+    console.error("❌ Error fetching orders:", error);
   }
 };
 

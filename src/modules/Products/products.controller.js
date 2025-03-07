@@ -254,6 +254,8 @@ const fetchAndStoreProducts = async () => {
             },
           }
         );
+        const attributeName = "costPrice";
+        const attribute1 = item.attributes.find((attr) => attr.name === attributeName);
         
         productVariations = variations.map((variation) => ({
           
@@ -273,7 +275,8 @@ const fetchAndStoreProducts = async () => {
           weight: variation.weight,
           dimensions: variation.dimensions,
           regularPrice: variation.regular_price,
-          salePrice: variation.sale_price
+          salePrice: variation.sale_price,
+          costPrice :attribute1 ? parseFloat(attribute1.options[0]) || 0 : 0,
         }));
       }
       // Fetch categories
@@ -318,7 +321,6 @@ const fetchAndStoreProducts = async () => {
 
       const attributeName = "costPrice";
       const attribute = item.attributes.find((attr) => attr.name === attributeName);
-
       const productData = {
         name: item.name,
         wordPressId: item.id.toString(),

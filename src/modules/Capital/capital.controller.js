@@ -20,30 +20,38 @@ const getAllCapital = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(capitalModel.find(), req.query)
 
   let results = await ApiFeat.mongooseQuery;
-const amountResult = await productModel.aggregate([
+  const amountResult = await productModel.aggregate([
+    {
+      $unwind: {
+        path: "$productVariations",
+        preserveNullAndEmptyArrays: true, // Keep products even if they have no variations
+      },
+    },
     {
       $group: {
         _id: null,
-        productsCount: { $sum: 1 },
+        productsCount: { $sum: 1 }, // Count all products (including ones without variations)
         totalAmount: {
           $sum: {
             $subtract: [
               {
                 $cond: {
-                  if: { $gt: ["$salePrice", 0] }, // If salePrice exists and is > 0
-                  then: "$salePrice", // Use salePrice
-                  else: "$sellingPrice", // Otherwise, use sellingPrice
+                  if: { 
+                    $gt: [{ $ifNull: ["$productVariations.salePrice", "$salePrice"] }, 0] 
+                  },
+                  then: { $ifNull: ["$productVariations.salePrice", "$salePrice"] },
+                  else: { $ifNull: ["$productVariations.regularPrice", "$sellingPrice"] },
                 },
               },
-              "$costPrice", // Subtract costPrice
+              { $ifNull: ["$productVariations.costPrice", "$costPrice"] }, // Handle missing costPrice
             ],
           },
-          },
+        },
         totalCostPrice: {
-          $sum: "$costPrice",
+          $sum: { $ifNull: ["$productVariations.costPrice", "$costPrice"] },
         },
         totalSellingPrice: {
-          $sum: "$sellingPrice",
+          $sum: { $ifNull: ["$productVariations.regularPrice", "$sellingPrice"] },
         },
       },
     },

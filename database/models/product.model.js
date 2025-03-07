@@ -103,6 +103,11 @@ const productSchema = mongoose.Schema(
     productVariations:
     [
       {
+        costPrice: {
+          type: Number,
+          default:null,
+          // required: true,
+        },
         regularPrice: {
           type: Number,
           default:null,
@@ -172,22 +177,22 @@ productSchema.pre("save", async function (next) {
       return next(new Error(`${err_2}`));
     }
     // Extract all branch IDs
-    const branchIds = this.store.map((item) => item.branch);
+    // const branchIds = this.store.map((item) => item.branch);
 
-    const existingInventories = await branchModel
-      .find({
-        _id: { $in: branchIds },
-      })
-      .select("_id");
+    // const existingInventories = await branchModel
+    //   .find({
+    //     _id: { $in: branchIds },
+    //   })
+    //   .select("_id");
 
-    const existingIds = existingInventories.map((inv) => inv._id.toString());
-    const missingIds = branchIds
-      .map((id) => id.toString())
-      .filter((id) => !existingIds.includes(id));
+    // const existingIds = existingInventories.map((inv) => inv._id.toString());
+    // const missingIds = branchIds
+    //   .map((id) => id.toString())
+    //   .filter((id) => !existingIds.includes(id));
 
-    if (missingIds.length > 0) {
-      return next(new Error(`${err_1}: ${missingIds.join(", ")}`));
-    }
+    // if (missingIds.length > 0 && check.fromWordPress == false) {
+    //   return next(new Error(`${err_1}: ${missingIds.join(", ")}`));
+    // }
 
     next();
   } catch (error) {
