@@ -121,13 +121,27 @@ branchSchema.post("find", async function (docs) {
     ]);
     const [capital] = await productModel.aggregate([
       { $match: { "store.branch": doc._id } }, // Match products under the branch
-      { $group: { _id: "$store.branch", totalAmount: { $sum: "$totalAmount" } } },
+      {
+        $group: {
+          _id: "$store.branch",
+          totalPrice: {
+            $sum: {
+              $cond: {
+                if: { $ne: ["$salePrice", null] }, // If salePrice is NOT null
+                then: "$salePrice", // Sum salePrice
+                else: "$sellingPrice" // Otherwise, sum sellingPrice
+              }
+            }
+          }
+        }
+      }
     ]);
+    
 
     const updateFields = {
       collectionAmount: orderResult?.totalAmount || 0,
       productsCount: productResult?.count || 0,
-      capital: capital?.totalAmount || 0,
+      capital: capital?.totalPrice || 0,
     };
 
     await branchModel.updateOne({ _id: doc._id }, { $set: updateFields },{new:true,userId: this.options.userId});

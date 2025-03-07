@@ -29,7 +29,7 @@ const userSchema = mongoose.Schema(
       minLength: [8, "password is too short , min length 8."],
       unique: [true, "Password must be unique."],
     },
-    branch:{
+    branch: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "branch",
       // required: true,
@@ -60,7 +60,7 @@ userSchema.pre("findOneAndUpdate", function () {
 });
 
 userSchema.pre("save", async function (next) {
-  this.branch = await branchModel.find()
+  this.branch = await branchModel.find();
   await logModel.create({
     user: this._id, // assuming you have a createdBy field
     action: "create User",

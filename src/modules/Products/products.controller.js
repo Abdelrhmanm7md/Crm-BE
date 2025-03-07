@@ -15,22 +15,6 @@ dotenv.config();
 const createProduct = catchAsync(async (req, res, next) => {
   req.body.store = JSON.parse(req.body.store);
   req.body.createdBy = req.user._id;
-  // if (req.body.discountPercentage > 0) {
-  //   req.body.discountPrice = req.body.sellingPrice - (req.body.sellingPrice * req.body.discountPercentage) / 100;
-  // } else if (req.body.discountPrice > 0) {
-  //   req.body.discountPercentage = ((req.body.sellingPrice - req.body.discountPrice) / req.body.sellingPrice) * 100;
-  // } else {
-  //   req.body.discountPrice = req.body.sellingPrice;
-  //   req.body.discountPercentage = 0;
-  // }
-  // let gallery = photoUpload(req, "gallery", "products");
-  // let pic = photoUpload(req, "pic", "products");
-  // pic = pic[0].replace(`${process.env.HOST}`, "");
-  // // http://147.93.89.1:8000/
-  // req.body.pic = pic;
-  // req.body.gallery = gallery.map((pic) =>
-  //   pic.replace(`${process.env.HOST}`, "")
-  // );
   let newProduct = new productModel(req.body);
   let addedProduct = await newProduct.save({ context: { query: req.query } });
 
@@ -45,7 +29,16 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   await ApiFeat.pagination(); // Ensure pagination waits for total count
 
   let results = await ApiFeat.mongooseQuery;
-
+  results = JSON.stringify(results);
+  results = JSON.parse(results);
+  let { startDate, endDate } = req.query;
+  if (startDate && endDate) {
+    
+    results = results.filter(function (item) {
+      
+      return new Date(item.createdAt) >= new Date(startDate) && new Date(item.createdAt).setHours(23, 59, 59, 999) <= new Date(endDate);
+    });
+  }
   res.json({
     message: "Done",
     page: ApiFeat.page,

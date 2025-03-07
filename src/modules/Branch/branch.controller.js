@@ -1,4 +1,5 @@
 import { branchModel } from "../../../database/models/branch.model.js";
+import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -53,6 +54,7 @@ const exportBranch = catchAsync(async (req, res, next) => {
 const getBranchById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
+  let products = await productModel.find({ store: { $elemMatch: { branch: id } } });
   let Branch = await branchModel.find({_id:id});
   let message_1 = " Branch not found!"
   if(req.query.lang == "ar"){
@@ -61,8 +63,11 @@ const getBranchById = catchAsync(async (req, res, next) => {
   if (!Branch || Branch.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
-
+  Branch = JSON.stringify(Branch);
+  Branch = JSON.parse(Branch);
 Branch=Branch[0]
+
+Branch.products = products;
   res.status(200).json({ message: "Done", Branch });
 });
 const updateBranch = catchAsync(async (req, res, next) => {
