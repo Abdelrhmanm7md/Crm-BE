@@ -30,12 +30,13 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
         };
 
         variation.weight = (variation.weight) || 0;
+        variation.costPrice = (variation.costPrice) || 0;
 
         const existingProduct = await productModel.findOne({
           _id: variation.product,
           "productVariations.color": variation.color,
           "productVariations.size": { $in: variation.size },
-          "productVariations.branch": variation.branch
+          "productVariations.branch": variation.branch,
         });
 
         if (existingProduct) {
@@ -44,9 +45,13 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
               _id: variation.product,
               "productVariations.color": variation.color,
               "productVariations.size": { $in: variation.size },
-              "productVariations.branch": variation.branch
+              "productVariations.branch": variation.branch,
+              "productVariations.costPrice": variation.costPrice,
+
             },
-            { $inc: { "productVariations.$.quantity": variation.quantity } },
+            { $inc: { "productVariations.$.quantity": variation.quantity },
+            $set: { "productVariations.$.costPrice": variation.costPrice } 
+          },
             { new: true, userId: req.user._id }
           );
         } else {

@@ -58,6 +58,11 @@ const supplierOrderSchema = mongoose.Schema(
                   type: Number,
                   // required: true,
                 },
+                costPrice: {
+                  type: Number,
+                  default:null,
+                  // required: true,
+                },
                 photo: {
                   type: String,
                   // required: true,
