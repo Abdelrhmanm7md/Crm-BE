@@ -131,9 +131,9 @@ supplierOrderSchema.pre("save", async function (next) {
   if (!check) {
     return next(new Error(err_2));
   }
-  this.totalAmount = this.products.reduce((acc, product) => {
-    return acc + product.price * product.quantity;
-  }, 0);
+  // this.totalAmount = this.products.reduce((acc, product) => {
+  //   return acc + product.price * product.quantity;
+  // }, 0);
   this.timeTablePayment.forEach((payment) => {
     this.paidPayment += payment.amount
   })

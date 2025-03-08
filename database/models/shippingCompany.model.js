@@ -61,10 +61,16 @@ const shippingCompanySchema = mongoose.Schema(
     },
     phone: {
       type: String,
-      // required: [true, "Phone is a required field."],
-      // minLength: [9, "phone is too short."],
-      // unique: [true, "this phone number is already registered."],
     },
+    collectionDoneAmount: [
+      {
+        date:{
+          type:Date,
+        },
+        amount:{
+          type:Number,
+        }
+    }],
     collectionAmount: {
       type: Number,
       required: true,
@@ -91,15 +97,15 @@ shippingCompanySchema.pre("save", async function (next) {
       length: 4,
       useLetters: false,
     });
-    let check = await shippingCompanyModel.findOne({ phone: this.phone });
-    const queryData = this.$locals.queryData;
-    let err_1 = "this phone number is already registered.";
-    if (queryData?.lang == "ar") {
-      err_1 = "هذا رقم الهاتف مسجل بالفعل";
-    }
-    if (check) {
-      throw new Error(err_1);
-    }
+  let check = await shippingCompanyModel.findOne({ phone: this.phone });
+  const queryData = this.$locals.queryData;
+  let err_1 = "this phone number is already registered.";
+  if (queryData?.lang == "ar") {
+    err_1 = "هذا رقم الهاتف مسجل بالفعل";
+  }
+  if (check) {
+    throw new Error(err_1);
+  }
   next();
 });
 shippingCompanySchema.pre("save", async function (next) {
@@ -160,10 +166,12 @@ shippingCompanySchema.pre(
 shippingCompanySchema.post("find", async function (docs) {
   if (!docs.length) return;
 
-  const shippingCompanyIds = docs.map(doc => doc._id);
+  const shippingCompanyIds = docs.map((doc) => doc._id);
 
   const orderStats = await orderModel.aggregate([
-    { $match: { shippingCompany: { $in: shippingCompanyIds } } },
+    { 
+      $match: { shippingCompany: { $in: shippingCompanyIds } } 
+    },
     {
       $group: {
         _id: "$shippingCompany",
@@ -171,23 +179,37 @@ shippingCompanySchema.post("find", async function (docs) {
         shippingOrders: {
           $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] },
         },
-        totalAmount: { $sum: "$totalAmount" },
+        totalAmount: {
+          $sum: {
+            $cond: [
+              { $in: ["$orderStatus", ["shipping", "completed"]] },
+              { $subtract: ["$totalAmount", "$shippingPrice"] }, // Subtract shippingPrice
+              0
+            ]
+          }
+        }
       },
-    },
+    }
   ]);
 
   const statsMap = new Map();
-  orderStats.forEach(stat => {
+  orderStats.forEach((stat) => {
     statsMap.set(stat._id.toString(), stat);
   });
+docs.forEach((doc) => {
+  const stat = statsMap.get(doc._id.toString());
+  doc.ordersCount = stat?.shippingOrders || 0;
+  doc.collectionAmount = stat?.totalAmount || 0;
 
-  docs.forEach(doc => {
-    const stat = statsMap.get(doc._id.toString());
-    doc.ordersCount = stat?.shippingOrders || 0;
-    doc.collectionAmount =
-      ((stat?.totalAmount || 0) * (stat?.totalOrders || 0)) -
-      (stat?.shippingOrders || 0);
-  });
+  let amount = 0;
+  if (Array.isArray(doc.collectionDoneAmount)) {
+      doc.collectionDoneAmount.forEach((item) => {
+          amount += item.amount;
+      });
+  }
+
+  doc.collectionAmount -= amount;
+});
 });
 
 export const shippingCompanyModel = mongoose.model(
