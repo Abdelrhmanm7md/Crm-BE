@@ -34,8 +34,11 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   if (startDate && endDate) {
     
     results = results.filter(function (item) {
-      
-      return new Date(item.createdAt) >= new Date(startDate) && new Date(item.createdAt).setHours(23, 59, 59, 999) <= new Date(endDate);
+      if(item.supplierOrderAt == null){
+        return new Date(item.createdAt) >= new Date(startDate) && new Date(item.createdAt).setHours(23, 59, 59, 999) <= new Date(endDate);
+      }else{
+        return new Date(item.supplierOrderAt) >= new Date(startDate) && new Date(item.supplierOrderAt).setHours(23, 59, 59, 999) <= new Date(endDate);
+      }
     });
   }
   res.json({

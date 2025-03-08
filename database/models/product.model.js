@@ -154,6 +154,10 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    supplierOrderAt: {
+      type: Date,
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",

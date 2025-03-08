@@ -15,6 +15,10 @@ const supplierSchema = mongoose.Schema(
       uniqe: true,
       // required: true,
     },
+    factoryName: {
+      type: [String],
+      required: true,
+    },
     category: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "category",

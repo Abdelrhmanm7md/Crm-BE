@@ -89,6 +89,10 @@ const supplierOrderSchema = mongoose.Schema(
     notes: {
       type: String,
     },
+    factoryName: {
+      type: String,
+      required: true,
+    },
     timeTablePayment:[
       {
         date:{

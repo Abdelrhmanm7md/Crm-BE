@@ -6,7 +6,6 @@ import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 const createSupplierOrder = catchAsync(async (req, res, next) => {  
   try {
       req.body.createdBy = req.user._id;
-      
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
 
@@ -14,8 +13,11 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
       for (const item of products) {
         await productModel.findOneAndUpdate(
           { _id: item.product, "store.branch": item.branch },
-          { $inc: { "store.$.quantity": item.quantity } }, // Increase stock
-          { new: true , userId: req.user._id }
+          { 
+            $inc: { "store.$.quantity": item.quantity }, // Increase stock quantity
+            $set: { supplierOrderAt: new Date(addedSupplierOrder.createdAt) } // Update supplierOrderAt timestamp
+          },
+          { new: true, userId: req.user._id }
         );
       }
       let productVariations = req.body.productVariations || [];

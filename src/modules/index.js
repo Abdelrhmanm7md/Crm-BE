@@ -15,6 +15,7 @@ import logRouter from "./log/log.routes.js";
 import shippingCompanyRouter from "./shipping Company/shippingCompany.routes.js";
 import usersRouter from "./users/users.routes.js";
 import statsRouter from "./Stats/stats.routes.js";
+import reportRouter from "./Reports/report.routes.js";
 export function init(app) {
   app.use("/api/v1/users", usersRouter);
   app.use("/api/v1/auth", authRouter);
@@ -33,6 +34,7 @@ export function init(app) {
   app.use("/api/v1/expenses", expensesRouter);
   app.use("/api/v1/capital", capitalRouter);
   app.use("/api/v1/stats", statsRouter);
+  app.use("/api/v1/reports", reportRouter);
 
 
   app.use("/", (req, res, next) => {

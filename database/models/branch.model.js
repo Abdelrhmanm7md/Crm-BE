@@ -16,11 +16,6 @@ const branchSchema = mongoose.Schema(
       unique: [true, "SKU is already taken"],
       required: true,
     },
-    collectionAmount: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
     productsCount: {
       type: Number,
       required: true,
@@ -109,11 +104,6 @@ branchSchema.pre(
 );
 branchSchema.post("find", async function (docs) {
   for (const doc of docs) {
-    // Aggregate orders for the branch
-    const [orderResult] = await orderModel.aggregate([
-      { $match: { branch: doc._id, orderStatus: "completed" } },
-      { $group: { _id: "$branch", totalAmount: { $sum: "$totalAmount" } } },
-    ]);
 
     const [productResult] = await productModel.aggregate([
       { $match: { "store.branch": doc._id } }, // Match products under the branch
@@ -139,7 +129,6 @@ branchSchema.post("find", async function (docs) {
     
 
     const updateFields = {
-      collectionAmount: orderResult?.totalAmount || 0,
       productsCount: productResult?.count || 0,
       capital: capital?.totalPrice || 0,
     };
