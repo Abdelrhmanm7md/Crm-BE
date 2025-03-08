@@ -7,8 +7,6 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 productRouter.post(
   "/",protectRoutes,
-  uploadMixFile("products", [{ name: "gallery" }, { name: "pic" }]),
-  fileSizeLimitErrorHandler,
   productController.createProduct
 );
 productRouter.get("/",protectRoutes, productController.getAllProduct);
@@ -20,8 +18,9 @@ productRouter.get("/fetch/", productController.fetchAllProducts);
 productRouter.get("/export/", productController.exportProducts);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);
+productRouter.put("/bulk/",productRouter, productController.updateProductsBulk);
 productRouter.put("/:id",protectRoutes, productController.updateProduct);
 
-productRouter.delete("/:id",protectRoutes, productController.deleteProduct);
+productRouter.delete("/bulk/",protectRoutes, productController.deleteProducts);
 
 export default productRouter;

@@ -9,6 +9,7 @@ import axios from "axios";
 import cron from "node-cron";
 import mongoose from "mongoose";
 import * as dotenv from "dotenv";
+import { logModel } from "../../../database/models/log.model.js";
 dotenv.config();
 
 const createProduct = catchAsync(async (req, res, next) => {
@@ -176,26 +177,98 @@ const updateProduct = catchAsync(async (req, res, next) => {
     .status(200)
     .json({ message: "Product updated successfully!", updatedProduct });
 });
+const updateProductsBulk = catchAsync(async (req, res, next) => {
+  const { updates } = req.body; // Array of updates
+  const userId = req.userId; // Get userId from query
 
-const deleteProduct = catchAsync(async (req, res, next) => {
-  let { id } = req.params;
-
-  let product = await productModel.findById(id);
-  let message_1 = "Couldn't delete! Not found!";
-  let message_2 = "Product deleted successfully!";
-  if (req.query.lang == "ar") {
-    message_1 = "لم يتم الحذف! غير موجود!";
-    message_2 = "تم حذف المنتج بنجاح!";
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return res.status(400).json({ message: "Invalid updates array!" });
   }
-  if (!product) {
+
+  // 1️⃣ Fetch all products before updating (to log previous values)
+  const productIds = updates.map((update) => update.id);
+  const beforeUpdates = await productModel.find({ _id: { $in: productIds } }).lean();
+
+  // Create a Map to easily access old data by product ID
+  const beforeUpdateMap = new Map(beforeUpdates.map((doc) => [doc._id.toString(), doc]));
+
+  // 2️⃣ Build bulkWrite operations
+  const bulkOps = updates.map((update) => ({
+    updateOne: {
+      filter: { _id: update.id }, // Match specific product
+      update: { $set: { ...update.fields, updatedBy: userId } } // Apply updates
+    }
+  }));
+
+  // 3️⃣ Apply bulk updates
+  const result = await productModel.bulkWrite(bulkOps);
+
+  // 4️⃣ Log changes
+  const logs = updates.map((update) => {
+    const before = beforeUpdateMap.get(update.id); // Get previous data
+    return {
+      user: userId,
+      action: "update product",
+      targetModel: "Product",
+      targetId: update.id,
+      before,
+      after: update.fields,
+    };
+  });
+
+  if (logs.length > 0) {
+    await logModel.insertMany(logs); // Insert logs in bulk
+  }
+
+  let message_1 = "Couldn't update! Products not found!";
+  if (req.query.lang == "ar") {
+    message_1 = "تعذر التحديث! المنتجات غير موجودة!";
+  }
+
+  if (result.modifiedCount === 0) {
     return res.status(404).json({ message: message_1 });
   }
 
-  product.userId = req.userId;
-  await product.deleteOne();
-
-  res.status(200).json({ message: message_2 });
+  res.status(200).json({ message: "Products updated successfully!", result });
 });
+
+const deleteProducts = catchAsync(async (req, res, next) => {
+  const { ids } = req.body; // Expecting an array of product IDs
+  const userId = req.userId; // Get userId from query
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: "Invalid product IDs!" });
+  }
+
+  // 1️⃣ Fetch products before deleting (for logging)
+  const products = await productModel.find({ _id: { $in: ids } }).lean();
+
+  if (products.length === 0) {
+    let message_1 = req.query.lang == "ar" ? "لم يتم الحذف! غير موجود!" : "Couldn't delete! Not found!";
+    return res.status(404).json({ message: message_1 });
+  }
+
+  // 2️⃣ Delete products in bulk
+  const result = await productModel.deleteMany({ _id: { $in: ids } });
+
+  // 3️⃣ Log deleted products
+  const logs = products.map((product) => ({
+    user: userId,
+    action: "delete product",
+    targetModel: "Product",
+    targetId: product._id,
+    before: product, // Store deleted product details
+  }));
+
+  if (logs.length > 0) {
+    await logModel.insertMany(logs); // Save logs in bulk
+  }
+
+  let message_2 = req.query.lang == "ar" ? "تم حذف المنتجات بنجاح!" : "Products deleted successfully!";
+
+  res.status(200).json({ message: message_2, deletedCount: result.deletedCount });
+});
+
 
 // ✅ Fetch & Update Products
 const fetchAndStoreProducts = async () => {
@@ -420,9 +493,9 @@ export {
   getAllProductsByCategory,
   getAllProductsByBranch,
   getProductById,
-  deleteProduct,
+  deleteProducts,
   updateProduct,
-  // updatePhotos,
+  updateProductsBulk,
   fetchAllProducts,
   exportProducts,
 };

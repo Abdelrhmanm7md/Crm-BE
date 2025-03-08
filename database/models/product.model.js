@@ -234,21 +234,21 @@ productSchema.pre("save", async function (next) {
 productSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const productId = this.getQuery()._id || this.getQuery().id;
-  const actionBy = this.options.userId; // ✅ Get userId from query options
+  const actionBy = this.options.userId; 
 
   if (!productId) return next();
 
   const beforeUpdate = await this.model.findById(productId).lean();
-  if (!beforeUpdate) return next(); // If product doesn't exist, skip logging
+  if (!beforeUpdate) return next(); 
 
   try {
     await logModel.create({
-      user: actionBy, // Store the user who performed the update
+      user: actionBy, 
       action: "update product",
       targetModel: "Product",
       targetId: productId,
       before: beforeUpdate,
-      after: update, // Stores the update object only (not the full document)
+      after: update, 
     });
   } catch (error) {
     console.error("Error logging product update:", error);

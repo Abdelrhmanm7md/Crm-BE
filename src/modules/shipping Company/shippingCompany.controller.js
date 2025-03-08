@@ -63,10 +63,26 @@ shippingCompany = shippingCompany[0];
 
 const updateShippingCompany = catchAsync(async (req, res, next) => {
   let { id } = req.params;
+  let { name, email, phone, addresses, governorate, country, company, postCode, priceList, collectionDoneAmount } = req.body;
 
-  let updatedshippingCompany = await shippingCompanyModel.findByIdAndUpdate(id, req.body, {
-    new: true,userId: req.userId, context: { query: req.query }
-  });
+  let updatedShippingCompany = await shippingCompanyModel.findByIdAndUpdate(
+    id,
+    {
+      $set: { 
+        name, email, phone, addresses, governorate, country, company, postCode, priceList
+      },
+      $push: { 
+        collectionDoneAmount: { 
+          date: req.body.date || new Date(), 
+          amount: req.body.amount 
+        } 
+      }
+    },
+{
+  new: true,userId: req.userId, context: { query: req.query }
+
+}
+  );
   let message_1 = "Couldn't update!  not found!"
   let message_2 = "shipping Company updated successfully!"
   if(req.query.lang == "ar"){
@@ -74,13 +90,13 @@ const updateShippingCompany = catchAsync(async (req, res, next) => {
     message_2 = "تم تحديث شركة الشحن بنجاح!"
   }
 
-  if (!updatedshippingCompany) {
+  if (!updatedShippingCompany) {
     return res.status(404).json({ message: message_1 });
   }
 
   res
     .status(200)
-    .json({ message: message_2, updatedshippingCompany });
+    .json({ message: message_2, updatedShippingCompany });
 });
 const deleteShippingCompany = catchAsync(async (req, res, next) => {
     let { id } = req.params;
