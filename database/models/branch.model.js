@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import { orderModel } from "./order.model.js";
 import { productModel } from "./product.model.js";
 import { logModel } from "./log.model.js";
-
+import * as dotenv from "dotenv";
+dotenv.config();
 const branchSchema = mongoose.Schema(
   {
     name: {
@@ -25,6 +25,11 @@ const branchSchema = mongoose.Schema(
       type: Number,
       required: true,
       default: 0,
+    },
+    products:{
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "product",
+      default: [],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -106,20 +111,20 @@ branchSchema.post("find", async function (docs) {
   for (const doc of docs) {
 
     const [productResult] = await productModel.aggregate([
-      { $match: { "store.branch": doc._id } }, // Match products under the branch
-      { $group: { _id: "$store.branch", count: { $sum: 1 } } },
+      { $match: { "productVariations.branch": doc._id } }, // Match products under the branch
+      { $group: { _id: "productVariations.branch", count: { $sum: 1 } } },
     ]);
     const [capital] = await productModel.aggregate([
-      { $match: { "store.branch": doc._id } }, // Match products under the branch
+      { $match: { "productVariations.branch": doc._id } }, // Match products under the branch
       {
         $group: {
-          _id: "$store.branch",
+          _id: "$productVariations.branch",
           totalPrice: {
             $sum: {
               $cond: {
-                if: { $ne: ["$salePrice", null] }, // If salePrice is NOT null
-                then: "$salePrice", // Sum salePrice
-                else: "$sellingPrice" // Otherwise, sum sellingPrice
+                if: { $ne: ["$productVariations.salePrice", null] }, // If salePrice is NOT null
+                then: "$productVariations.salePrice", // Sum salePrice
+                else: "$productVariations.sellingPrice" // Otherwise, sum sellingPrice
               }
             }
           }
@@ -128,11 +133,15 @@ branchSchema.post("find", async function (docs) {
     ]);
     
 
+    let products = []
+    if(doc._id.toString() == process.env.MAINBRANCH){
+      products = await productModel.find()
+    }
     const updateFields = {
       productsCount: productResult?.count || 0,
       capital: capital?.totalPrice || 0,
+      products: products
     };
-
     await branchModel.updateOne({ _id: doc._id }, { $set: updateFields },{new:true,userId: this.options.userId});
   }
 });

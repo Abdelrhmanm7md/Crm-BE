@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { branchModel } from "./branch.model.js";
 import { logModel } from "./log.model.js";
 
 const productSchema = mongoose.Schema(
@@ -62,19 +61,6 @@ const productSchema = mongoose.Schema(
       type: [String],
       default: [],
     },
-    store: [
-      {
-        branch: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "branch",
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-        },
-      },
-    ],
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "supplier",
@@ -86,20 +72,6 @@ const productSchema = mongoose.Schema(
       default:0,
       // required: true,
     },
-    costPrice: {
-      type: Number,
-      default:null,
-      required: true,
-    },
-    salePrice: {
-      type: Number,
-      default:null,
-    },
-    sellingPrice: {
-      type: Number,
-      default:null,
-      required: true,
-    },
     productVariations:
     [
       {
@@ -108,7 +80,7 @@ const productSchema = mongoose.Schema(
           default:null,
           // required: true,
         },
-        regularPrice: {
+        sellingPrice: {
           type: Number,
           default:null,
           // required: true,
@@ -144,9 +116,9 @@ const productSchema = mongoose.Schema(
           height: { type: String, },
         },
         branch: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: [mongoose.Schema.Types.ObjectId],
           ref: "branch",
-          required: true,
+          // required: true,
         },
       },
     ],
@@ -167,42 +139,6 @@ const productSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-productSchema.pre("save", async function (next) {
-  const queryData = this.$locals.queryData;
-  let err_1 = "There are branch(s) that do not exist";
-  let err_2 = "SKU is already taken";
-  if (queryData?.lang == "ar") {
-    err_1 = "هناك مخزون (ات) غير موجود";
-    err_2 = "SKU مأخوذ بالفعل";
-  }
-  try {
-    let check = await productModel.findOne({ SKU: this.SKU });
-    if (check) {
-      return next(new Error(`${err_2}`));
-    }
-    // Extract all branch IDs
-    // const branchIds = this.store.map((item) => item.branch);
-
-    // const existingInventories = await branchModel
-    //   .find({
-    //     _id: { $in: branchIds },
-    //   })
-    //   .select("_id");
-
-    // const existingIds = existingInventories.map((inv) => inv._id.toString());
-    // const missingIds = branchIds
-    //   .map((id) => id.toString())
-    //   .filter((id) => !existingIds.includes(id));
-
-    // if (missingIds.length > 0 && check.fromWordPress == false) {
-    //   return next(new Error(`${err_1}: ${missingIds.join(", ")}`));
-    // }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 
 productSchema.pre(
   /^delete/,
@@ -279,13 +215,10 @@ productSchema.post("find", function (docs) {
   docs.forEach((doc) => {
     if (doc.productVariations?.length > 0) {
       doc.totalQuantity = doc.productVariations.reduce((sum, variation) => sum + (variation.quantity || 0), 0);
-    } else {
-      doc.totalQuantity = doc.store?.reduce((sum, storeItem) => sum + (storeItem.quantity || 0), 0);
     }
   });
 });
 productSchema.pre(/^find/, function () {
-  this.populate({"path":"store.branch"});
   this.populate("supplier");
   this.populate("brand");
   this.populate("category");

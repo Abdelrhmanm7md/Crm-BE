@@ -64,19 +64,6 @@ const getCategoryById = catchAsync(async (req, res, next) => {
 
 const updateCategory = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  // const { name, suppliersToAdd, suppliersToRemove } = req.body;
-
-  // const update = { name};
-
-  // if (suppliersToAdd && suppliersToAdd.length > 0) {
-  //   update.$push = { suppliers: { $each: suppliersToAdd } };
-  // }
-
-  // if (suppliersToRemove && suppliersToRemove.length > 0) {
-  //   update.$pull = { suppliers: { $in: suppliersToRemove } };
-  // }
-
-  // const updatedCategory = await categoryModel.findByIdAndUpdate(id, update, { new: true });
   const updatedCategory = await categoryModel.findByIdAndUpdate(id, req.body, {
     new: true,
     userId: req.userId,

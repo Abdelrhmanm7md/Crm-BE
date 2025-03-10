@@ -1,7 +1,6 @@
 import { branchModel } from "../../../database/models/branch.model.js";
 import { productModel } from "../../../database/models/product.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createBranch = catchAsync(async (req, res, next) => {
@@ -17,44 +16,17 @@ const createBranch = catchAsync(async (req, res, next) => {
 
 const getAllBranch = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(branchModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-    // let message_1 = "No Branch was found!"
-    // if(req.query.lang == "ar"){
-    //   message_1 = "لم يتم العثور على فرع!"
-    // }
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
 
 });
 
-const exportBranch = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    branchModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 
 const getBranchById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let products = await productModel.find({ store: { $elemMatch: { branch: id } } });
+  let products = await productModel.find({ productVariations: { $elemMatch: { branch: id } } });
   let Branch = await branchModel.find({_id:id});
   let message_1 = " Branch not found!"
   if(req.query.lang == "ar"){
@@ -115,7 +87,6 @@ const deleteBranch = catchAsync(async (req, res, next) => {
 export {
   createBranch,
   getAllBranch,
-  exportBranch,
   getBranchById,
   deleteBranch,
   updateBranch,

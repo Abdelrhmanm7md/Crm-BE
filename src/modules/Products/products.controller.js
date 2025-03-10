@@ -13,8 +13,15 @@ import { logModel } from "../../../database/models/log.model.js";
 dotenv.config();
 
 const createProduct = catchAsync(async (req, res, next) => {
-  req.body.store = JSON.parse(req.body.store);
   req.body.createdBy = req.user._id;
+  let err_2 = "SKU already exists";
+  if (req.query.lang == "ar") {
+    err_2 = "SKU مأخوذ بالفعل";
+  }
+  let check = await productModel.findOne({ SKU: this.SKU });
+  if (check) {
+    return next(new Error(`${err_2}`));
+  }
   let newProduct = new productModel(req.body);
   let addedProduct = await newProduct.save({ context: { query: req.query } });
 
@@ -33,12 +40,19 @@ const getAllProduct = catchAsync(async (req, res, next) => {
   results = JSON.parse(results);
   let { startDate, endDate } = req.query;
   if (startDate && endDate) {
-    
     results = results.filter(function (item) {
-      if(item.supplierOrderAt == null){
-        return new Date(item.createdAt) >= new Date(startDate) && new Date(item.createdAt).setHours(23, 59, 59, 999) <= new Date(endDate);
-      }else{
-        return new Date(item.supplierOrderAt) >= new Date(startDate) && new Date(item.supplierOrderAt).setHours(23, 59, 59, 999) <= new Date(endDate);
+      if (item.supplierOrderAt == null) {
+        return (
+          new Date(item.createdAt) >= new Date(startDate) &&
+          new Date(item.createdAt).setHours(23, 59, 59, 999) <=
+            new Date(endDate)
+        );
+      } else {
+        return (
+          new Date(item.supplierOrderAt) >= new Date(startDate) &&
+          new Date(item.supplierOrderAt).setHours(23, 59, 59, 999) <=
+            new Date(endDate)
+        );
       }
     });
   }
@@ -58,7 +72,6 @@ const exportProducts = catchAsync(async (req, res, next) => {
     message: "Done",
     results,
   });
-
 });
 const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
   let { supplierId } = req.params;
@@ -111,7 +124,7 @@ const getAllProductsByBranch = catchAsync(async (req, res, next) => {
   }
 
   let result = await productModel.find({
-    store: { $elemMatch: { branch: branchId } },
+    productVariations: { $elemMatch: { branch: branchId } },
   });
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
@@ -187,17 +200,21 @@ const updateProductsBulk = catchAsync(async (req, res, next) => {
 
   // 1️⃣ Fetch all products before updating (to log previous values)
   const productIds = updates.map((update) => update.id);
-  const beforeUpdates = await productModel.find({ _id: { $in: productIds } }).lean();
+  const beforeUpdates = await productModel
+    .find({ _id: { $in: productIds } })
+    .lean();
 
   // Create a Map to easily access old data by product ID
-  const beforeUpdateMap = new Map(beforeUpdates.map((doc) => [doc._id.toString(), doc]));
+  const beforeUpdateMap = new Map(
+    beforeUpdates.map((doc) => [doc._id.toString(), doc])
+  );
 
   // 2️⃣ Build bulkWrite operations
   const bulkOps = updates.map((update) => ({
     updateOne: {
       filter: { _id: update.id }, // Match specific product
-      update: { $set: { ...update.fields, updatedBy: userId } } // Apply updates
-    }
+      update: { $set: { ...update.fields, updatedBy: userId } }, // Apply updates
+    },
   }));
 
   // 3️⃣ Apply bulk updates
@@ -244,7 +261,10 @@ const deleteProducts = catchAsync(async (req, res, next) => {
   const products = await productModel.find({ _id: { $in: ids } }).lean();
 
   if (products.length === 0) {
-    let message_1 = req.query.lang == "ar" ? "لم يتم الحذف! غير موجود!" : "Couldn't delete! Not found!";
+    let message_1 =
+      req.query.lang == "ar"
+        ? "لم يتم الحذف! غير موجود!"
+        : "Couldn't delete! Not found!";
     return res.status(404).json({ message: message_1 });
   }
 
@@ -264,11 +284,15 @@ const deleteProducts = catchAsync(async (req, res, next) => {
     await logModel.insertMany(logs); // Save logs in bulk
   }
 
-  let message_2 = req.query.lang == "ar" ? "تم حذف المنتجات بنجاح!" : "Products deleted successfully!";
+  let message_2 =
+    req.query.lang == "ar"
+      ? "تم حذف المنتجات بنجاح!"
+      : "Products deleted successfully!";
 
-  res.status(200).json({ message: message_2, deletedCount: result.deletedCount });
+  res
+    .status(200)
+    .json({ message: message_2, deletedCount: result.deletedCount });
 });
-
 
 // ✅ Fetch & Update Products
 const fetchAndStoreProducts = async () => {
@@ -277,14 +301,12 @@ const fetchAndStoreProducts = async () => {
     let allProducts = [];
     let totalFetched = 0;
 
+    // Fetch all WooCommerce products in pages
     do {
       const { data } = await axios.get(
         "https://a2mstore.com/wp-json/wc/v3/products",
         {
-          params: {
-            per_page: 100,
-            page: page,
-          },
+          params: { per_page: 100, page },
           auth: {
             username: process.env.CONSUMERKEY,
             password: process.env.CONSUMERSECRET,
@@ -307,11 +329,12 @@ const fetchAndStoreProducts = async () => {
 
     console.log(`✅ Fetched ${allProducts.length} products from WooCommerce`);
 
+    // Process each product
     for (const item of allProducts) {
       const productSKU = item.id.toString();
-
-      // Fetch Product Variations if the product is a variable product
       let productVariations = [];
+
+      // Fetch Product Variations (if variable product)
       if (item.type === "variable") {
         const { data: variations } = await axios.get(
           `https://a2mstore.com/wp-json/wc/v3/products/${item.id}/variations`,
@@ -330,11 +353,8 @@ const fetchAndStoreProducts = async () => {
             },
           }
         );
-        const attributeName = "costPrice";
-        const attribute1 = item.attributes.find((attr) => attr.name === attributeName);
-        
+
         productVariations = variations.map((variation) => ({
-          
           quantity:
             variation.stock_status === "instock" &&
             typeof variation.stock_quantity === "number"
@@ -342,19 +362,23 @@ const fetchAndStoreProducts = async () => {
               : 0,
           photo: variation.image ? variation.image.src : undefined,
           color:
-            variation.attributes.find((attr) => attr.name.toLowerCase() === "color")?.option ||
-            "",
+            variation.attributes.find(
+              (attr) => attr.name.toLowerCase() === "color"
+            )?.option || "",
           size: variation.attributes
             .filter((attr) => attr.name.toLowerCase() === "size")
             .map((attr) => attr.option),
-            branch: process.env.WEBSITEBRANCHID,
+          branch: [new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID)],
           weight: variation.weight,
           dimensions: variation.dimensions,
-          regularPrice: variation.regular_price,
-          salePrice: variation.sale_price,
-          costPrice :attribute1 ? parseFloat(attribute1.options[0]) || 0 : 0,
+          sellingPrice: parseFloat(variation.regular_price) || 0,
+          salePrice: parseFloat(variation.sale_price) || 0,
+          costPrice: parseFloat(
+            item.attributes.find((attr) => attr.name === "costPrice")?.options[0]
+          ) || 0,
         }));
       }
+
       // Fetch categories
       const categoryIds = await Promise.all(
         item.categories.map(async (cat) => {
@@ -364,7 +388,7 @@ const fetchAndStoreProducts = async () => {
               $setOnInsert: {
                 name: cat.name,
                 slug: cat.slug,
-                createdBy: `${process.env.WEBSITEADMIN}`,
+                createdBy: process.env.WEBSITEADMIN,
                 SKU: `WP-${cat.id}`,
               },
             },
@@ -383,7 +407,7 @@ const fetchAndStoreProducts = async () => {
               $setOnInsert: {
                 name: brand.name,
                 slug: brand.slug,
-                createdBy: `${process.env.WEBSITEADMIN}`,
+                createdBy: process.env.WEBSITEADMIN,
                 SKU: `WP-${brand.id}`,
               },
             },
@@ -395,12 +419,10 @@ const fetchAndStoreProducts = async () => {
 
       const existingProduct = await productModel.findOne({ wordPressId: productSKU });
 
-      const attributeName = "costPrice";
-      const attribute = item.attributes.find((attr) => attr.name === attributeName);
       const productData = {
         name: item.name,
         wordPressId: item.id.toString(),
-        SKU: item.SKU || `WP-${item.id}`,
+        SKU: item.sku || `WP-${item.id}`,
         shortDescription: item.short_description || "",
         description: item.description || "",
         brand: brandIds,
@@ -411,16 +433,13 @@ const fetchAndStoreProducts = async () => {
         })),
         pic: item.images.length > 0 ? item.images[0].src : undefined,
         gallery: item.images.map((img) => img.src),
-        createdBy: `${process.env.WEBSITEADMIN}`,
-        costPrice: attribute ? parseFloat(attribute.options[0]) || 0 : 0,
-        sellingPrice: parseFloat(item.price) || 0,
-        salePrice: parseFloat(item.sale_price) || null,
+        createdBy: process.env.WEBSITEADMIN,
         fromWordPress: true,
         productVariations: productVariations,
       };
 
       const storeEntry = {
-        branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+        branch: [new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID)],
         quantity:
           item.stock_status === "instock" &&
           typeof item.stock_quantity === "number"
@@ -432,27 +451,21 @@ const fetchAndStoreProducts = async () => {
       if (existingProduct) {
         await productModel
           .findOneAndUpdate(
-            { _id: existingProduct._id, "store.branch": storeEntry.branch },
             {
-              $set: {
-                "store.$.quantity": storeEntry.quantity,
-                productVariations: productVariations,
+              _id: existingProduct._id,
+              "productVariations.branch": {
+                $elemMatch: { $eq: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) },
               },
             },
-            {
-              new: true,
-              userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-            }
+            { $set: { productVariations } },
+            { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
           )
           .then(async (result) => {
             if (!result) {
               await productModel.findOneAndUpdate(
                 { _id: existingProduct._id },
-                { $push: { store: storeEntry }, productVariations },
-                {
-                  new: true,
-                  userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-                }
+                { $push: { productVariations: storeEntry } },
+                { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
               );
             }
           });
@@ -460,7 +473,7 @@ const fetchAndStoreProducts = async () => {
       } else {
         await productModel.create({
           ...productData,
-          store: [storeEntry],
+          productVariations: [storeEntry],
         });
         console.log(`✅ Created Product: ${item.name}`);
       }

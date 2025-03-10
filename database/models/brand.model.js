@@ -113,18 +113,26 @@ brandSchema.pre(
 brandSchema.post("find", async function (docs) {
   for (const doc of docs) {
     const [result] = await productModel.aggregate([
-      { $match: { brand: doc._id } },
+      { $match: { brand: doc._id } }, // Match products under the given brand
+      {
+        $project: {
+          costPrice: 1,
+          sellingPrice: 1,
+          variationsCostPrice: { $sum: "$productVariations.costPrice" },
+          variationsSellingPrice: { $sum: "$productVariations.sellingPrice" },
+        },
+      },
       {
         $group: {
           _id: "$brand",
           productsCount: { $sum: 1 },
-          productsCost: { $sum: "$costPrice" },
-          totalSellingPrice: { $sum: "$sellingPrice" },
+          totalCostPrice: { $sum:  "$variationsCostPrice" },
+          totalSellingPrice: { $sum: "$variationsSellingPrice" },
         },
       },
       {
         $addFields: {
-          productsGain: { $subtract: ["$totalSellingPrice", "$productsCost"] },
+          productsGain: { $subtract: ["$totalSellingPrice", "$totalCostPrice"] },
         },
       },
     ]);

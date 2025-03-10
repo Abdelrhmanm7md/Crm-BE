@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
 import { supplierModel } from "./supplier.model.js";
-
+import * as dotenv from "dotenv";
+dotenv.config();
 const supplierOrderSchema = mongoose.Schema(
   {
     supplier: {
@@ -11,86 +12,67 @@ const supplierOrderSchema = mongoose.Schema(
     },
     productsCount: {
       type: Number,
-      min : 0,
+      min: 0,
       required: [true, "products Count is a required field."],
     },
     totalAmount: {
       type: Number,
-      min : 0,
+      min: 0,
     },
     paidPayment: {
       type: Number,
-      min : 0,
+      min: 0,
       // required: [true, "paid Payment is a required field."],
     },
-    remainingPayment : {
+    remainingPayment: {
       type: Number,
-      min : 0,
+      min: 0,
       // required: [true, "remaining Payment is a required field."],
     },
-    products: [
-          {
-            branch: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "branch",
-              required: true,
-            },
-            product: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "product",
-              required: true,
-            },
-            quantity: {
-              type: Number,
-              required: true,
-            },
-          },
-        ],
-        productVariations:
-            [
-              {
-                product: {
-                  type: mongoose.Schema.Types.ObjectId,
-                  ref: "product",
-                  // required: true,
-                },
-                quantity: {
-                  type: Number,
-                  // required: true,
-                },
-                costPrice: {
-                  type: Number,
-                  default:null,
-                  // required: true,
-                },
-                photo: {
-                  type: String,
-                  // required: true,
-                },
-                color: {
-                  type: String,
-                  // required: true,
-                },
-                size: {
-                  type: [String],
-                  // required: true,
-                },
-                weight:{
-                  type: String,
-                  // required: true,
-                },
-                dimensions: {
-                  length: { type: String,  },
-                  width: { type: String,  },
-                  height: { type: String, },
-                },
-                branch: {
-                  type: mongoose.Schema.Types.ObjectId,
-                  ref: "branch",
-                  // required: true,
-                },
-              },
-            ],
+    productVariations: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "product",
+          // required: true,
+        },
+        quantity: {
+          type: Number,
+          // required: true,
+        },
+        costPrice: {
+          type: Number,
+          default: null,
+          // required: true,
+        },
+        photo: {
+          type: String,
+          // required: true,
+        },
+        color: {
+          type: String,
+          // required: true,
+        },
+        size: {
+          type: [String],
+          // required: true,
+        },
+        weight: {
+          type: String,
+          // required: true,
+        },
+        dimensions: {
+          length: { type: String },
+          width: { type: String },
+          height: { type: String },
+        },
+        branch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "branch",
+          // required: true,
+        },
+      },
+    ],
     notes: {
       type: String,
     },
@@ -98,16 +80,17 @@ const supplierOrderSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    timeTablePayment:[
+    timeTablePayment: [
       {
-        date:{
-          type:Date,
-          required:true
+        date: {
+          type: Date,
+          required: true,
         },
-        amount:{
-          type:Number,
+        amount: {
+          type: Number,
         },
-    }],
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -135,9 +118,9 @@ supplierOrderSchema.pre("save", async function (next) {
   //   return acc + product.price * product.quantity;
   // }, 0);
   this.timeTablePayment.forEach((payment) => {
-    this.paidPayment += payment.amount
-  })
-  this.remainingPayment = this.totalAmount - this.paidPayment
+    this.paidPayment += payment.amount;
+  });
+  this.remainingPayment = this.totalAmount - this.paidPayment;
   await logModel.create({
     user: this.createdBy,
     action: "create Order from Supplier || انشاء طلبية من المورد",
@@ -192,4 +175,7 @@ supplierOrderSchema.pre(
   }
 );
 
-export const supplierOrderModel = mongoose.model("supplierOrder", supplierOrderSchema);
+export const supplierOrderModel = mongoose.model(
+  "supplierOrder",
+  supplierOrderSchema
+);

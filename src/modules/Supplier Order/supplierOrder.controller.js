@@ -9,17 +9,6 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
 
-      let products = req.body.products || []; 
-      for (const item of products) {
-        await productModel.findOneAndUpdate(
-          { _id: item.product, "store.branch": item.branch },
-          { 
-            $inc: { "store.$.quantity": item.quantity }, // Increase stock quantity
-            $set: { supplierOrderAt: new Date(addedSupplierOrder.createdAt) } // Update supplierOrderAt timestamp
-          },
-          { new: true, userId: req.user._id }
-        );
-      }
       let productVariations = req.body.productVariations || [];
       for (const variation of productVariations) {
         
@@ -28,50 +17,44 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
           width: (variation.dimensions?.width) || 0,
           height: (variation.dimensions?.height) || 0,
         };
-
+        
         variation.weight = (variation.weight) || 0;
         variation.costPrice = (variation.costPrice) || 0;
-
+        
         const existingProduct = await productModel.findOne({
           _id: variation.product,
           "productVariations.color": variation.color,
           "productVariations.size": { $in: variation.size },
-          "productVariations.branch": variation.branch,
+          "productVariations.branch": process.env.MAINBRANCH,
         });
-
+        
         if (existingProduct) {
           await productModel.findOneAndUpdate(
             {
               _id: variation.product,
               "productVariations.color": variation.color,
               "productVariations.size": { $in: variation.size },
-              "productVariations.branch": variation.branch,
+              "productVariations.branch": process.env.MAINBRANCH,
               "productVariations.costPrice": variation.costPrice,
-
+              
             },
             { $inc: { "productVariations.$.quantity": variation.quantity },
-            $set: { "productVariations.$.costPrice": variation.costPrice } 
+            $set: { "productVariations.$.costPrice": variation.costPrice,
+              supplierOrderAt: new Date(addedSupplierOrder.createdAt) } 
           },
-            { new: true, userId: req.user._id }
-          );
-        } else {
-          await productModel.findOneAndUpdate(
-            { _id: variation.product },
-            { $push: { productVariations: variation } },
+          { new: true, userId: req.user._id }
+        );
+      } else {
+        await productModel.findOneAndUpdate(
+          { _id: variation.product },
+            { $push: { productVariations: variation } ,supplierOrderAt: new Date(addedSupplierOrder.createdAt) },
             { new: true, userId: req.user._id }
           );
         }
       }
 
-      // Calculate totalAmount
-      // req.body.totalAmount = products.reduce((acc, product) => {
-      //     return acc + (product.price || 0) * (product.quantity || 0);
-      // }, 0);
-
-      // Ensure paidPayment starts from 0
       req.body.paidPayment = 0;
 
-      // Check if timeTablePayment is an array before using forEach
       if (Array.isArray(req.body.timeTablePayment)) {
           req.body.timeTablePayment.forEach((payment) => {
               req.body.paidPayment += payment.amount || 0;
@@ -134,7 +117,7 @@ const updateSupplierOrder = catchAsync(async (req, res, next) => {
   }
 
   try {
-    const { products, timeTablePayment } = req.body;
+    const { timeTablePayment } = req.body;
 
     if (timeTablePayment) {
 

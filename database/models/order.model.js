@@ -79,54 +79,44 @@ const orderSchema = mongoose.Schema(
       default: "processing",
       required: true,
     },
-    products: {
+    productVariations: {
       type: [
         {
           product: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "product",
-            required: true,
-          },
-          quantity: {
-            type: Number,
-            required: true,
+            // required: true,
           },
           price: {
             type: Number,
             required: true,
           },
-        },
-      ],
-    },
-    productVariations: {
-     type: [{
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "product",
-          // required: true,
-        },
-        quantity: {
-          type: Number,
-          // required: true,
-        },
-        color: {
-          type: String,
-          // required: true,
-        },
-        size: {
-          type: [String],
-          // required: true,
-        },
+          quantity: {
+            type: Number,
+            // required: true,
+          },
+          color: {
+            type: String,
+            // required: true,
+          },
+          size: {
+            type: [String],
+            // required: true,
+          },
         },
       ],
       default: [],
-      },
+    },
     shippingPrice: {
       type: Number,
       default: 0,
       required: true,
     },
     fromWordPress: {
+      type: Boolean,
+      default: false,
+    },
+    stockReduced: {
       type: Boolean,
       default: false,
     },
@@ -168,7 +158,7 @@ orderSchema.pre("save", async function (next) {
 orderSchema.pre("save", async function (next) {
   const Product = mongoose.model("product");
   try {
-    for (const item of this.products) {
+    for (const item of this.productVariations) {
       const product = await Product.findById(item.product);
       if (!product) {
         throw new Error(`${err_1}`);
@@ -184,8 +174,8 @@ orderSchema.pre("save", async function (next) {
         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`;
       }
 
-      const storeItem = product.store.find(
-        (store) => String(store.branch._id) === String(this.branch)
+      const storeItem = product.productVariations.find((variation) =>
+        variation.branch.some((b) => String(b) === String(branch))
       );
 
       if (!storeItem) {
@@ -267,14 +257,14 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   // Use this.getQuery() to access the query
   const queryData = this.getQuery();
   const update = this.getUpdate();
-  const { products, branch, orderStatus } = update;
+  const { productVariations, branch, orderStatus } = update;
 
-  if (!products || !branch || !orderStatus) {
+  if (!productVariations || !branch || !orderStatus) {
     return next();
   }
 
   try {
-    for (const item of products) {
+    for (const item of productVariations) {
       let err_1 = `Product with ID ${item.product} not found.`;
       let err_2 = `Branch ${branch} not found for product.`;
       let err_3 = `Insufficient quantity for product.`;
@@ -290,8 +280,8 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         throw new Error(err_1);
       }
 
-      const storeItem = product.store.find(
-        (store) => String(store.branch) === String(branch)
+      const storeItem = product.productVariations.find((variation) =>
+        variation.branch.some((b) => String(b) === String(branch))
       );
       if (!storeItem && product.fromWordPress == false) {
         throw new Error(err_2);
@@ -322,56 +312,37 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
   const willProcessNow = ["shipping"].includes(update.orderStatus);
 
   if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
-    for (const item of order.products) {
       const product = await mongoose.model("product").findById(item.productId);
-      if (!product) continue;
-      if(order.fromWordPress == false){
-
-        if ((!order.productVariations || order.productVariations.length === 0) ) {
-          product.store.forEach((storeItem) => {
-            if (storeItem.branch.toString() === item.branchId.toString()) {
-              if (storeItem.quantity >= item.quantity) {
-                storeItem.quantity -= item.quantity;
-              } else {
-                throw new Error(`Not enough stock for product ${product.name}`);
-              }
-          }
-        });
-
-        await product.updateOne(
-          { _id: item.productId, "store.branch": item.branchId },
-          { $inc: { "store.$.quantity": -item.quantity } },
-          { userId: this.options.userId }
-        );
-      } else {
-        // If productVariations exist, decrease stock from productVariations.quantity
+      if (!product) next();
+      if (order.fromWordPress == false) {
         for (const variation of order.productVariations) {
           await mongoose.model("product").findOneAndUpdate(
             {
               _id: variation.product,
-              "productVariations.color": variation.color,
-              "productVariations.size": { $in: variation.size },
-              "productVariations.branch": variation.branch
+              productVariations: {
+                $elemMatch: {
+                  color: variation.color,
+                  size: { $in: variation.size },
+                  branch: variation.branch, // Matches if branch list contains variation.branch
+                },
+              },
             },
             {
-              $inc: { "productVariations.$.quantity": -variation.quantity }
+              $inc: { "productVariations.$.quantity": -variation.quantity },
             },
             {
-              userId: this.options.userId
+              new: true,
+              userId: this.options.userId,
             }
           );
         }
-      }
-      }
     }
   }
 
   next();
 });
 
-
 orderSchema.pre(/^find/, function () {
-  this.populate({ path: "products.product" });
   this.populate("supplier");
   this.populate("shippingCompany");
   this.populate("branch");

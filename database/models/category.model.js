@@ -106,22 +106,31 @@ categorySchema.pre(
 
 categorySchema.post("find", async function (docs) {
   for (const doc of docs) {
-    const [result] = await productModel.aggregate([
-      { $match: { category: doc._id } },
-      {
-        $group: {
-          _id: "$category",
-          productsCount: { $sum: 1 },
-          productsCost: { $sum: "$costPrice" },
-          totalSellingPrice: { $sum: "$sellingPrice" },
-        },
-      },
-      {
-        $addFields: {
-          productsGain: { $subtract: ["$totalSellingPrice", "$productsCost"] },
-        },
-      },
-    ]);
+
+     const [result] = await productModel.aggregate([
+          { $match: { category: doc._id } }, // Match products under the given brand
+          {
+            $project: {
+              costPrice: 1,
+              sellingPrice: 1,
+              variationsCostPrice: { $sum: "$productVariations.costPrice" },
+              variationsSellingPrice: { $sum: "$productVariations.sellingPrice" },
+            },
+          },
+          {
+            $group: {
+              _id: "$category",
+              productsCount: { $sum: 1 },
+              totalCostPrice: { $sum:  "$variationsCostPrice"  },
+              totalSellingPrice: { $sum:  "$variationsSellingPrice"},
+            },
+          },
+          {
+            $addFields: {
+              productsGain: { $subtract: ["$totalSellingPrice", "$totalCostPrice"] },
+            },
+          },
+        ]);
 
     // Prepare update fields
     const updateFields = {

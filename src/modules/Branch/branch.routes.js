@@ -6,7 +6,6 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 
 branchRouter.get("/",protectRoutes, branchController.getAllBranch);
-branchRouter.get("/export/",protectRoutes, branchController.exportBranch);
 branchRouter.get("/:id",protectRoutes, branchController.getBranchById);
 branchRouter.put("/:id",protectRoutes, branchController.updateBranch);
 branchRouter.post("/",protectRoutes, branchController.createBranch);
