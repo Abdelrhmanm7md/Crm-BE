@@ -158,8 +158,8 @@ orderSchema.pre("save", async function (next) {
 orderSchema.pre("save", async function (next) {
   const Product = mongoose.model("product");
   try {
-    const product = await Product.findById(item.product);
     for (const item of this.productVariations) {
+      const product = await Product.findById(item.product);
       const queryData = this.$locals.queryData;
       let err_1 = `Product with ID ${item.product} not found.`;
       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`;
