@@ -159,10 +159,6 @@ orderSchema.pre("save", async function (next) {
   const Product = mongoose.model("product");
   try {
     for (const item of this.productVariations) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        throw new Error(`${err_1}`);
-      }
       const queryData = this.$locals.queryData;
       let err_1 = `Product with ID ${item.product} not found.`;
       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`;
@@ -172,6 +168,10 @@ orderSchema.pre("save", async function (next) {
         err_1 = `هذا الصنف غير موجود${item.product}!`;
         err_2 = `هناك مخزون (ات) غير موجود`;
         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`;
+      }
+      const product = await Product.findById(item.product);
+      if (!product) {
+        throw new Error(`${err_1}`);
       }
 
       const storeItem = product.productVariations.find((variation) =>
