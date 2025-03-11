@@ -158,6 +158,7 @@ orderSchema.pre("save", async function (next) {
 orderSchema.pre("save", async function (next) {
   const Product = mongoose.model("product");
   try {
+    const product = await Product.findById(item.product);
     for (const item of this.productVariations) {
       const queryData = this.$locals.queryData;
       let err_1 = `Product with ID ${item.product} not found.`;
@@ -169,7 +170,6 @@ orderSchema.pre("save", async function (next) {
         err_2 = `هناك مخزون (ات) غير موجود`;
         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`;
       }
-      const product = await Product.findById(item.product);
       if (!product) {
         throw new Error(`${err_1}`);
       }
