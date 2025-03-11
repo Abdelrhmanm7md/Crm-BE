@@ -265,39 +265,45 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
     const update = this.getUpdate();
     if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
 
-    const order = await this.model.findOne(this.getQuery()).lean();
-    if (!order) return next();
+    const orderData = await this.model.findOne(this.getQuery()).lean();
+    if (!orderData) return next();
 
-    const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
+    const wasAlreadyProcessed = ["shipping"].includes(orderData.orderStatus);
     const willProcessNow = ["shipping"].includes(update.orderStatus);
 
-    if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
+    if (!wasAlreadyProcessed && willProcessNow && !orderData.stockReduced && orderData.fromWordPress == false) {
       const Product = mongoose.model("product");
 
-      for (const variation of order.productVariations) {
-        const product = await Product.findById(variation.product);
-        if (!product) continue; // Skip this iteration if product is not found
-
+      for (const variation of orderData.productVariations) {
         await Product.findOneAndUpdate(
           {
             _id: variation.product,
-            productVariations: {
-              $elemMatch: {
-                color: variation.color,
-                size: { $in: variation.size },
-                branch: variation.branch, // Matches if branch list contains variation.branch
+            "productVariations.color": variation.color,
+            "productVariations.size": { $in: variation.size },
+            "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+          },
+          {
+            $inc: { "productVariations.$[elem].quantity": -variation.quantity },
+          },
+          {
+            arrayFilters: [
+              {
+                "elem.color": variation.color,
+                "elem.size": { $in: variation.size },
+                "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
               },
-            },
-          },
-          {
-            $inc: { "productVariations.$.quantity": -variation.quantity },
-          },
-          {
-            new: true,
-            userId: this.options.userId,
+            ],
+            runValidators: true,
+            userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
           }
         );
       }
+
+      // ✅ Mark order as stock reduced
+      await this.model.findOneAndUpdate(
+        { _id: orderData._id },
+        { $set: { stockReduced: true } }
+      );
     }
 
     next();
