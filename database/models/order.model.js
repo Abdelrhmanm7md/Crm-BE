@@ -284,8 +284,8 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         const productBeforeUpdate = await Product.findOne({
           _id: variation.product,
           "productVariations.color": variation.color,
-          "productVariations.size": { $in: variation.size },
-          "productVariations.branch": variation.branch,
+          "productVariations.size": { $in: variation.size }, // Corrected: size is an array
+          "productVariations.branch": { $in: variation.branch }, // Corrected: branch is an array
         });
         console.log("Matched Product Before Update:", productBeforeUpdate);
 
@@ -297,9 +297,6 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         await Product.findOneAndUpdate(
           {
             _id: variation.product,
-            "productVariations.color": variation.color,
-            "productVariations.size": { $in: variation.size },
-            "productVariations.branch": variation.branch,
           },
           {
             $inc: { "productVariations.$[elem].quantity": -variation.quantity },
@@ -308,8 +305,8 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
             arrayFilters: [
               {
                 "elem.color": variation.color,
-                "elem.size": { $in: variation.size },
-                "elem.branch": variation.branch,
+                "elem.size": { $in: variation.size }, // Corrected: size is an array
+                "elem.branch": { $in: variation.branch }, // Corrected: branch is an array
               },
             ],
             runValidators: true,
@@ -331,6 +328,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
     next(error);
   }
 });
+
 
 orderSchema.pre(/^find/, function () {
   this.populate("supplier");
