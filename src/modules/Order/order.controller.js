@@ -17,6 +17,39 @@ const createOrder = catchAsync(async (req, res, next) => {
   try {
     req.body.createdBy = req.user._id;
 
+    const Product = mongoose.model("product");
+    const queryData = req.query; // Assuming `lang` comes from `req.query`
+    
+    // Validate each product in the order
+    for (const item of req.body.productVariations) {
+      const product = await Product.findById(item.product);
+
+      if (!product) {
+        const err_1 = queryData?.lang === "ar"
+          ? `هذا الصنف غير موجود ${item.product}!`
+          : `Product with ID ${item.product} not found.`;
+        return next(new AppError(err_1, 400));
+      }
+
+      const storeItem = product.productVariations.find((variation) =>
+        variation.branch.some((b) => String(b) === String(req.body.branch))
+      );
+
+      if (!storeItem) {
+        const err_2 = queryData?.lang === "ar"
+          ? `هناك مخزون (ات) غير موجود`
+          : `Branch ${req.body.branch} not found for product: ${product.name}`;
+        return next(new AppError(err_2, 400));
+      }
+
+      if (storeItem.quantity < item.quantity && !product.fromWordPress) {
+        const err_3 = queryData?.lang === "ar"
+          ? `لا يوجد كمية كافية للمنتج: ${product.name}`
+          : `Insufficient quantity for product: ${product.name}`;
+        return next(new AppError(err_3, 400));
+      }
+    }
+
     // Calculate total before discount
     let totalBeforeDiscount = req.body.productVariations.reduce((total, prod) => {
       return total + prod.price * prod.quantity;
@@ -25,8 +58,8 @@ const createOrder = catchAsync(async (req, res, next) => {
     req.body.totalAmountBeforeDiscount = totalBeforeDiscount;
 
     // Apply coupon if provided
+    let shippingPrice = req.body.shippingPrice;
     if (req.body.coupon) {
-      let shippingPrice = 0;
       const coupon = await couponModel.findById(req.body.coupon);
       if (!coupon) return next(new AppError("Invalid coupon", 400));
 
@@ -37,12 +70,10 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       // Check minimum amount requirement
       if (totalBeforeDiscount < coupon.minimumAmount) {
-        return next(
-          new AppError(
-            `Order total must be at least ${coupon.minimumAmount} to use this coupon`,
-            400
-          )
-        );
+        return next(new AppError(
+          `Order total must be at least ${coupon.minimumAmount} to use this coupon`, 
+          400
+        ));
       }
 
       // Check global usage limit
@@ -52,7 +83,9 @@ const createOrder = catchAsync(async (req, res, next) => {
       }
 
       // Check per-user usage limit
-      const userUsage = await orderModel.countDocuments({ customer: req.body.customer, coupon: req.body.coupon });
+      const userUsage = await orderModel.countDocuments({
+        customer: req.body.customer, coupon: req.body.coupon 
+      });
       if (userUsage >= coupon.usageLimitPerUser) {
         return next(new AppError("User coupon limit exceeded", 400));
       }
@@ -67,20 +100,20 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       // Ensure discount doesn't exceed total amount
       discountAmount = Math.min(discountAmount, totalBeforeDiscount);
-if(coupon.freeShipping){
-  shippingPrice = 0;
-}else{
-  shippingPrice = req.body.shippingPrice;
-}
-      // Set discounted total
+
+      // Apply free shipping if applicable
+      if (coupon.freeShipping) {
+        shippingPrice = 0;
+      }
+
       req.body.totalAmount = totalBeforeDiscount - discountAmount + shippingPrice;
     } else {
-      req.body.totalAmount = totalBeforeDiscount + req.body.shippingPrice;
+      req.body.totalAmount = totalBeforeDiscount + shippingPrice;
     }
 
     // Create and save order
     let newOrder = new orderModel(req.body);
-    let addedOrder = await newOrder.save({ context: { query: req.query } });
+    let addedOrder = await newOrder.save();
 
     res.status(201).json({
       message: "Order has been created successfully!",
