@@ -271,21 +271,35 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
     const wasAlreadyProcessed = ["shipping"].includes(orderData.orderStatus);
     const willProcessNow = ["shipping"].includes(update.orderStatus);
 
-    if (
-      !wasAlreadyProcessed &&
-      willProcessNow &&
-      !orderData.stockReduced &&
-      orderData.fromWordPress == false
-    ) {
+    if (!wasAlreadyProcessed && willProcessNow && !orderData.stockReduced && orderData.fromWordPress == false) {
       const Product = mongoose.model("product");
 
       for (const variation of orderData.productVariations) {
+        if (!variation.quantity || variation.quantity <= 0) {
+          console.error(`Invalid quantity for variation:`, variation);
+          continue; // Skip if quantity is not valid
+        }
+
+        // ✅ Debugging - Check if product is found before update
+        const productBeforeUpdate = await Product.findOne({
+          _id: variation.product,
+          "productVariations.color": variation.color,
+          "productVariations.size": { $in: variation.size },
+          "productVariations.branch": variation.branch,
+        });
+        console.log("Matched Product Before Update:", productBeforeUpdate);
+
+        if (!productBeforeUpdate) {
+          console.error(`Product not found for variation:`, variation);
+          continue; // Skip if no product matches
+        }
+
         await Product.findOneAndUpdate(
           {
             _id: variation.product,
             "productVariations.color": variation.color,
             "productVariations.size": { $in: variation.size },
-            "productVariations.branch": { $in: variation.branch },
+            "productVariations.branch": variation.branch,
           },
           {
             $inc: { "productVariations.$[elem].quantity": -variation.quantity },
@@ -295,7 +309,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
               {
                 "elem.color": variation.color,
                 "elem.size": { $in: variation.size },
-                "elem.branch": { $in: variation.branch },
+                "elem.branch": variation.branch,
               },
             ],
             runValidators: true,
@@ -313,6 +327,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
 
     next();
   } catch (error) {
+    console.error("Error in order update middleware:", error);
     next(error);
   }
 });
