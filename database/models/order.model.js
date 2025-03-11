@@ -103,6 +103,10 @@ const orderSchema = mongoose.Schema(
             type: [String],
             // required: true,
           },
+          id: {
+            type: String,
+            // required: true,
+          },
         },
       ],
       default: [],
@@ -283,7 +287,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         // ✅ Debugging - Check if product is found before update
         const productBeforeUpdate = await Product.findOne({
           _id: variation.product,
-          "productVariations._id": variation.id,
+          "productVariations._id": new mongoose.Types.ObjectId(variation.id), // Ensure _id is properly cast
         });
         console.log("Matched Product Before Update:", productBeforeUpdate);
 
@@ -292,21 +296,17 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
           continue; // Skip if no product matches
         }
 
+        // ✅ Updating variation by _id
         await Product.findOneAndUpdate(
           {
             _id: variation.product,
+            "productVariations._id": new mongoose.Types.ObjectId(variation.id), // Ensure proper matching
           },
           {
-            $inc: { "productVariations.$[elem].quantity": -variation.quantity },
+            $inc: { "productVariations.$.quantity": -variation.quantity }, // Update directly using $
           },
           {
-            arrayFilters: [
-              {
-                "elem.color": variation.color,
-                "elem.size": { $in: variation.size }, // Corrected: size is an array
-                "elem.branch": { $in: variation.branch }, // Corrected: branch is an array
-              },
-            ],
+            new: true,
             runValidators: true,
             userId: this.options.userId,
           }
