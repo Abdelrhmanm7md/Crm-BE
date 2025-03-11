@@ -243,9 +243,9 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         throw new Error(err_1);
       }
 
-      const storeItem = product.productVariations.find((variation) =>
-        variation.branch.some((b) => String(b) === String(branch))
-      );
+      const storeItem = product.productVariations.find(
+        (variation) => String(variation.branch) === String(branch)
+      );      
       if (!storeItem && product.fromWordPress == false) {
         throw new Error(err_2);
       }
@@ -289,7 +289,6 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
           _id: variation.product,
           "productVariations._id": new mongoose.Types.ObjectId(variation.id), // Ensure _id is properly cast
         });
-        console.log("Matched Product Before Update:", productBeforeUpdate);
 
         if (!productBeforeUpdate) {
           console.error(`Product not found for variation:`, variation);

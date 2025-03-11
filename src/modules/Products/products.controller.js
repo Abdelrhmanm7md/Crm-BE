@@ -10,6 +10,7 @@ import cron from "node-cron";
 import mongoose from "mongoose";
 import * as dotenv from "dotenv";
 import { logModel } from "../../../database/models/log.model.js";
+import { productLogsModel } from "../../../database/models/productTransferLog.model.js";
 dotenv.config();
 
 const createProduct = catchAsync(async (req, res, next) => {
@@ -18,7 +19,7 @@ const createProduct = catchAsync(async (req, res, next) => {
   if (req.query.lang == "ar") {
     err_2 = "SKU مأخوذ بالفعل";
   }
-  let SKU = req.body.SKU
+  let SKU = req.body.SKU;
   let check = await productModel.findOne({ SKU: SKU });
   if (check) {
     return next(new Error(`${err_2}`));
@@ -81,7 +82,6 @@ const getAllProductsBySupplier = catchAsync(async (req, res, next) => {
   if (!result || result.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
-
   res.status(200).json({ message: "Done", result });
 });
 const getAllProductsByBrand = catchAsync(async (req, res, next) => {
@@ -157,8 +157,11 @@ const getProductById = catchAsync(async (req, res, next) => {
   if (!Product || Product.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
-  Product = JSON.parse(JSON.stringify(Product));
   Product = Product[0];
+  Product = JSON.parse(JSON.stringify(Product));
+  console.log(await productLogsModel.find({ product: Product._id }).sort({ createdAt: -1 }));
+  
+  Product.transferLog = await productLogsModel.find({ product: Product._id }).sort({ createdAt: -1 }) || [];
   res.status(200).json({ message: "Done", Product });
 });
 
@@ -360,14 +363,16 @@ const fetchAndStoreProducts = async () => {
           size: variation.attributes
             .filter((attr) => attr.name.toLowerCase() === "size")
             .map((attr) => attr.option),
-          branch: [new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID)],
+          branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
           weight: variation.weight,
           dimensions: variation.dimensions,
           sellingPrice: parseFloat(variation.regular_price) || 0,
           salePrice: parseFloat(variation.sale_price) || 0,
-          costPrice: parseFloat(
-            item.attributes.find((attr) => attr.name === "costPrice")?.options[0]
-          ) || 0,
+          costPrice:
+            parseFloat(
+              item.attributes.find((attr) => attr.name === "costPrice")
+                ?.options[0]
+            ) || 0,
         }));
       }
 
@@ -409,7 +414,9 @@ const fetchAndStoreProducts = async () => {
         })
       );
 
-      const existingProduct = await productModel.findOne({ wordPressId: productSKU });
+      const existingProduct = await productModel.findOne({
+        wordPressId: productSKU,
+      });
 
       const productData = {
         name: item.name,
@@ -431,7 +438,7 @@ const fetchAndStoreProducts = async () => {
       };
 
       const storeEntry = {
-        branch: [new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID)],
+        branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
         quantity:
           item.stock_status === "instock" &&
           typeof item.stock_quantity === "number"
@@ -445,19 +452,25 @@ const fetchAndStoreProducts = async () => {
           .findOneAndUpdate(
             {
               _id: existingProduct._id,
-              "productVariations.branch": {
-                $elemMatch: { $eq: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) },
-              },
+              "productVariations.branch": new mongoose.Types.ObjectId(
+                process.env.WEBSITEBRANCHID
+              ),
             },
             { $set: { productVariations } },
-            { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+            {
+              new: true,
+              userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
+            }
           )
           .then(async (result) => {
             if (!result) {
               await productModel.findOneAndUpdate(
                 { _id: existingProduct._id },
                 { $push: { productVariations: storeEntry } },
-                { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+                {
+                  new: true,
+                  userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
+                }
               );
             }
           });

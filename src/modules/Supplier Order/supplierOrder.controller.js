@@ -14,19 +14,24 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
       }
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
-      addedSupplierOrder =JSON.parse(JSON.stringify(addedSupplierOrder));
+      addedSupplierOrder = JSON.parse(JSON.stringify(addedSupplierOrder));
       addedSupplierOrder.productVariations = addedSupplierOrder.productVariations || [];
+
       for (const variation of addedSupplierOrder.productVariations) {
-        const product = variation.product;
-        if (!product) continue;
-      
+        const product = await productModel.findById(variation.product); // ✅ Fetch the full product document
+        if (!product) continue; // Skip if product is null
+
+        if (!Array.isArray(product.productVariations)) {
+          product.productVariations = [];
+        }
+
         const existingVariation = product.productVariations.find(
           (v) =>
             v.color === variation.color &&
             JSON.stringify(v.size) === JSON.stringify(variation.size) &&
             v.branch.toString() === variation.branch.toString()
         );
-      
+
         if (existingVariation) {
           // Update quantity and costPrice
           existingVariation.quantity += variation.quantity;
@@ -46,15 +51,16 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
             branch: variation.branch,
           });
         }
-            
+
+        // Update total quantity
+        product.totalQuantity += variation.quantity;
+
         product.supplierOrderAt = new Date(addedSupplierOrder.createdAt);
-      
+        product.supplier = supplier._id;
         await product.save();
-      }
-      
+      }      
 
       req.body.paidPayment = 0;
-
       if (Array.isArray(req.body.timeTablePayment)) {
           req.body.timeTablePayment.forEach((payment) => {
               req.body.paidPayment += payment.amount || 0;

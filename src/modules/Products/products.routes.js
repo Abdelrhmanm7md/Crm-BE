@@ -2,7 +2,6 @@ import express from "express";
 const productRouter = express.Router();
 
 import * as productController from "./products.controller.js";
-import { fileSizeLimitErrorHandler, uploadMixFile, } from "../../utils/middleWare/fileUploads.js";
 import { protectRoutes } from "../auth/auth.controller.js";
 
 productRouter.post(

@@ -116,7 +116,7 @@ const productSchema = mongoose.Schema(
           height: { type: String, },
         },
         branch: {
-          type: [mongoose.Schema.Types.ObjectId],
+          type: mongoose.Schema.Types.ObjectId,
           ref: "branch",
           // required: true,
         },
@@ -126,6 +126,11 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // transferLog: {
+    //   type: [mongoose.Schema.Types.ObjectId],
+    //   ref: "productLog",
+    //   default:[],
+    // },
     supplierOrderAt: {
       type: Date,
       default: null,
@@ -211,13 +216,14 @@ productSchema.pre(
   }
 );
 
-productSchema.post("find", function (docs) {
-  docs.forEach((doc) => {
+productSchema.post("find", async function (docs) {
+  for (const doc of docs) {
     if (doc.productVariations?.length > 0) {
       doc.totalQuantity = doc.productVariations.reduce((sum, variation) => sum + (variation.quantity || 0), 0);
     }
-  });
+  }
 });
+
 productSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("brand");
