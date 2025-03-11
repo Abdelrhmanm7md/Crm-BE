@@ -18,7 +18,8 @@ const createProduct = catchAsync(async (req, res, next) => {
   if (req.query.lang == "ar") {
     err_2 = "SKU مأخوذ بالفعل";
   }
-  let check = await productModel.findOne({ SKU: this.SKU });
+  let SKU = req.body.SKU
+  let check = await productModel.findOne({ SKU: SKU });
   if (check) {
     return next(new Error(`${err_2}`));
   }
