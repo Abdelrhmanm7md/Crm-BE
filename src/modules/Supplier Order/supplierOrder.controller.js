@@ -1,4 +1,5 @@
 import { productModel } from "../../../database/models/product.model.js";
+import { supplierModel } from "../../../database/models/supplier.model.js";
 import { supplierOrderModel } from "../../../database/models/supplierOrder.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -6,52 +7,50 @@ import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 const createSupplierOrder = catchAsync(async (req, res, next) => {  
   try {
       req.body.createdBy = req.user._id;
+      const supplier = await supplierModel.findById(req.body.supplier);
+
+      if (!supplier) {
+        throw new Error("Supplier order not found.");
+      }
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
-
-      let productVariations = req.body.productVariations || [];
-      for (const variation of productVariations) {
-        
-        variation.dimensions = {
-          length: (variation.dimensions?.length) || 0,
-          width: (variation.dimensions?.width) || 0,
-          height: (variation.dimensions?.height) || 0,
-        };
-        
-        variation.weight = (variation.weight) || 0;
-        variation.costPrice = (variation.costPrice) || 0;
-        
-        const existingProduct = await productModel.findOne({
-          _id: variation.product,
-          "productVariations.color": variation.color,
-          "productVariations.size": { $in: variation.size },
-          "productVariations.branch": process.env.MAINBRANCH,
-        });
-        
-        if (existingProduct) {
-          await productModel.findOneAndUpdate(
-            {
-              _id: variation.product,
-              "productVariations.color": variation.color,
-              "productVariations.size": { $in: variation.size },
-              "productVariations.branch": process.env.MAINBRANCH,
-              "productVariations.costPrice": variation.costPrice,
-              
-            },
-            { $inc: { "productVariations.$.quantity": variation.quantity },
-            $set: { "productVariations.$.costPrice": variation.costPrice,
-              supplierOrderAt: new Date(addedSupplierOrder.createdAt) } 
-          },
-          { new: true, userId: req.user._id }
+      addedSupplierOrder.productVariations = addedSupplierOrder.productVariations || [];
+      for (const variation of addedSupplierOrder.productVariations) {
+        const product = variation.product;
+        if (!product) continue;
+      
+        const existingVariation = product.productVariations.find(
+          (v) =>
+            v.color === variation.color &&
+            JSON.stringify(v.size) === JSON.stringify(variation.size) &&
+            v.branch.toString() === variation.branch.toString()
         );
-      } else {
-        await productModel.findOneAndUpdate(
-          { _id: variation.product },
-            { $push: { productVariations: variation } ,supplierOrderAt: new Date(addedSupplierOrder.createdAt) },
-            { new: true, userId: req.user._id }
-          );
+      
+        if (existingVariation) {
+          // Update quantity and costPrice
+          existingVariation.quantity += variation.quantity;
+          existingVariation.costPrice = variation.costPrice;
+        } else {
+          // Add new variation
+          product.productVariations.push({
+            costPrice: variation.costPrice,
+            sellingPrice: null,
+            salePrice: null,
+            quantity: variation.quantity,
+            photo: variation.photo,
+            color: variation.color,
+            size: variation.size,
+            weight: variation.weight,
+            dimensions: variation.dimensions,
+            branch: variation.branch,
+          });
         }
+            
+        product.supplierOrderAt = new Date(addedSupplierOrder.createdAt);
+      
+        await product.save();
       }
+      
 
       req.body.paidPayment = 0;
 
