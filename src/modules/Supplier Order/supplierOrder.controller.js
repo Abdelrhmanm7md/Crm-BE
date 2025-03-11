@@ -14,6 +14,7 @@ const createSupplierOrder = catchAsync(async (req, res, next) => {
       }
       let newSupplierOrder = new supplierOrderModel(req.body);
       let addedSupplierOrder = await newSupplierOrder.save({ context: { query: req.query } });
+      addedSupplierOrder =JSON.parse(JSON.stringify(addedSupplierOrder));
       addedSupplierOrder.productVariations = addedSupplierOrder.productVariations || [];
       for (const variation of addedSupplierOrder.productVariations) {
         const product = variation.product;
