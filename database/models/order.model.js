@@ -261,44 +261,49 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
 });
 
 orderSchema.pre("findOneAndUpdate", async function (next) {
-  const update = this.getUpdate();
-  if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
+  try {
+    const update = this.getUpdate();
+    if (!update.orderStatus) return next(); // Skip if orderStatus is not updated
 
-  const order = await this.model.findOne(this.getQuery()).lean();
-  if (!order) return next();
+    const order = await this.model.findOne(this.getQuery()).lean();
+    if (!order) return next();
 
-  const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
-  const willProcessNow = ["shipping"].includes(update.orderStatus);
+    const wasAlreadyProcessed = ["shipping"].includes(order.orderStatus);
+    const willProcessNow = ["shipping"].includes(update.orderStatus);
 
-  if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
-      const product = await mongoose.model("product").findById(item.productId);
-      if (!product) next();
-      if (order.fromWordPress == false) {
-        for (const variation of order.productVariations) {
-          await mongoose.model("product").findOneAndUpdate(
-            {
-              _id: variation.product,
-              productVariations: {
-                $elemMatch: {
-                  color: variation.color,
-                  size: { $in: variation.size },
-                  branch: variation.branch, // Matches if branch list contains variation.branch
-                },
+    if (!wasAlreadyProcessed && willProcessNow && order.fromWordPress == false) {
+      const Product = mongoose.model("product");
+
+      for (const variation of order.productVariations) {
+        const product = await Product.findById(variation.product);
+        if (!product) continue; // Skip this iteration if product is not found
+
+        await Product.findOneAndUpdate(
+          {
+            _id: variation.product,
+            productVariations: {
+              $elemMatch: {
+                color: variation.color,
+                size: { $in: variation.size },
+                branch: variation.branch, // Matches if branch list contains variation.branch
               },
             },
-            {
-              $inc: { "productVariations.$.quantity": -variation.quantity },
-            },
-            {
-              new: true,
-              userId: this.options.userId,
-            }
-          );
-        }
+          },
+          {
+            $inc: { "productVariations.$.quantity": -variation.quantity },
+          },
+          {
+            new: true,
+            userId: this.options.userId,
+          }
+        );
+      }
     }
-  }
 
-  next();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 orderSchema.pre(/^find/, function () {
