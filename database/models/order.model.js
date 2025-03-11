@@ -161,32 +161,33 @@ orderSchema.pre("save", async function (next) {
     for (const item of this.productVariations) {
       const product = await Product.findById(item.product);
       const queryData = this.$locals.queryData;
-      let err_1 = `Product with ID ${item.product} not found.`;
+      
+      if (!product) {
+        let err_1 = `Product with ID ${item.product} not found.`;
+        if (queryData?.lang == "ar") {
+          err_1 = `هذا الصنف غير موجود${item.product}!`;
+        }
+        throw new Error(err_1);
+      }
+
       let err_2 = `Branch ${this.branch} not found for product: ${product.name}`;
       let err_3 = `Insufficient quantity for product: ${product.name}`;
 
       if (queryData?.lang == "ar") {
-        err_1 = `هذا الصنف غير موجود${item.product}!`;
         err_2 = `هناك مخزون (ات) غير موجود`;
         err_3 = `لا يوجد كمية كافية للمنتج: ${product.name}`;
       }
-      if (!product) {
-        throw new Error(`${err_1}`);
-      }
 
       const storeItem = product.productVariations.find((variation) =>
-        variation.branch.some((b) => String(b) === String(branch))
+        variation.branch.some((b) => String(b) === String(this.branch))
       );
 
       if (!storeItem) {
-        throw new Error(`${err_2}`);
+        throw new Error(err_2);
       }
 
-      if (
-        storeItem.quantity < item.quantity &&
-        product.fromWordPress == false
-      ) {
-        throw new Error(`${err_3}`);
+      if (storeItem.quantity < item.quantity && !product.fromWordPress) {
+        throw new Error(err_3);
       }
     }
 
