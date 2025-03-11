@@ -271,7 +271,12 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
     const wasAlreadyProcessed = ["shipping"].includes(orderData.orderStatus);
     const willProcessNow = ["shipping"].includes(update.orderStatus);
 
-    if (!wasAlreadyProcessed && willProcessNow && !orderData.stockReduced && orderData.fromWordPress == false) {
+    if (
+      !wasAlreadyProcessed &&
+      willProcessNow &&
+      !orderData.stockReduced &&
+      orderData.fromWordPress == false
+    ) {
       const Product = mongoose.model("product");
 
       for (const variation of orderData.productVariations) {
@@ -280,7 +285,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
             _id: variation.product,
             "productVariations.color": variation.color,
             "productVariations.size": { $in: variation.size },
-            "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+            "productVariations.branch": { $in: variation.branch },
           },
           {
             $inc: { "productVariations.$[elem].quantity": -variation.quantity },
@@ -290,11 +295,11 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
               {
                 "elem.color": variation.color,
                 "elem.size": { $in: variation.size },
-                "elem.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+                "elem.branch": { $in: variation.branch },
               },
             ],
             runValidators: true,
-            userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
+            userId: this.options.userId,
           }
         );
       }
