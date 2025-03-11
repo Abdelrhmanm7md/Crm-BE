@@ -283,9 +283,7 @@ orderSchema.pre("findOneAndUpdate", async function (next) {
         // ✅ Debugging - Check if product is found before update
         const productBeforeUpdate = await Product.findOne({
           _id: variation.product,
-          "productVariations.color": variation.color,
-          "productVariations.size": { $in: variation.size }, // Corrected: size is an array
-          "productVariations.branch": { $in: variation.branch }, // Corrected: branch is an array
+          "productVariations._id": variation.id,
         });
         console.log("Matched Product Before Update:", productBeforeUpdate);
 
