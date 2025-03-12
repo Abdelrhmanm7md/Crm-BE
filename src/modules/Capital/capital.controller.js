@@ -37,25 +37,26 @@ const getAllCapital = catchAsync(async (req, res, next) => {
               {
                 $cond: {
                   if: { 
-                    $gt: [{ $ifNull: ["$productVariations.salePrice",] }, 0] 
+                    $gt: [{ $ifNull: ["$productVariations.salePrice", 0] }, 0] 
                   },
-                  then: { $ifNull: ["$productVariations.salePrice",] },
-                  else: { $ifNull: ["$productVariations.sellingPrice",] },
+                  then: { $ifNull: ["$productVariations.salePrice", 0] },
+                  else: { $ifNull: ["$productVariations.sellingPrice", 0] },
                 },
               },
-              { $ifNull: ["$productVariations.costPrice", ] }, // Handle missing costPrice
+              { $ifNull: ["$productVariations.costPrice", 0] }, // Handle missing costPrice
             ],
           },
         },
         totalCostPrice: {
-          $sum: { $ifNull: ["$productVariations.costPrice", ] },
+          $sum: { $ifNull: ["$productVariations.costPrice", 0] },
         },
         totalSellingPrice: {
-          $sum: { $ifNull: ["$productVariations.sellingPrice", ] },
+          $sum: { $ifNull: ["$productVariations.sellingPrice", 0] },
         },
       },
     },
   ]);
+  
   const productsData = {
     reason : "Products",
     amount : amountResult[0]?.totalAmount,
