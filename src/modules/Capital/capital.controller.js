@@ -30,20 +30,14 @@ const getAllCapital = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        productsCount: { $sum: 1 }, // Count all products (including ones without variations)
+        productsCount: { $sum: 1 }, // Count all valid products
         totalAmount: {
           $sum: {
             $subtract: [
-              {
-                $cond: {
-                  if: { 
-                    $gt: [{ $ifNull: ["$productVariations.salePrice", 0] }, 0] 
-                  },
-                  then: { $ifNull: ["$productVariations.salePrice", 0] },
-                  else: { $ifNull: ["$productVariations.sellingPrice", 0] },
-                },
+              { 
+                $ifNull: ["$productVariations.salePrice", "$productVariations.sellingPrice"] 
               },
-              { $ifNull: ["$productVariations.costPrice", 0] }, // Handle missing costPrice
+              { $ifNull: ["$productVariations.costPrice", 0] },
             ],
           },
         },
@@ -56,7 +50,7 @@ const getAllCapital = catchAsync(async (req, res, next) => {
       },
     },
   ]);
-  
+
   const productsData = {
     reason : "Products",
     amount : amountResult[0]?.totalAmount,
