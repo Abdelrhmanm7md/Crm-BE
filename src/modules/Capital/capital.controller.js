@@ -44,6 +44,9 @@ const getAllCapital = catchAsync(async (req, res, next) => {
         totalCostPrice: {
           $sum: { $ifNull: ["$productVariations.costPrice", 0] },
         },
+        totalSalePrice: {
+          $sum: { $ifNull: ["$productVariations.salePrice", 0] },
+        },
         totalSellingPrice: {
           $sum: { $ifNull: ["$productVariations.sellingPrice", 0] },
         },
