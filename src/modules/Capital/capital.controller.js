@@ -59,6 +59,7 @@ const getAllCapital = catchAsync(async (req, res, next) => {
     amount : amountResult[0]?.totalAmount,
     productsCount : amountResult[0]?.productsCount,
     totalCostPrice : amountResult[0]?.totalCostPrice,
+    totalSalePrice : amountResult[0]?.totalSalePrice,
     totalSellingPrice : amountResult[0]?.totalSellingPrice
   }
 
