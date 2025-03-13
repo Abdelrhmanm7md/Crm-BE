@@ -1,6 +1,7 @@
 import { capitalModel } from "../../../database/models/capital.model.js";
 import { orderModel } from "../../../database/models/order.model.js";
 import { productModel } from "../../../database/models/product.model.js";
+import { salaryModel } from "../../../database/models/salaries.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
@@ -89,8 +90,26 @@ const getAllCapital = catchAsync(async (req, res, next) => {
     amount : orderResult[0]?.totalCompletedAmount,
     completedOrdersCount : orderResult[0]?.completedOrders,
   }
+  const salaryResult = await salaryModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        salariesCount: { $sum: 1 },
+        salariesBudget: {
+          $sum: "$salary",
+        }, 
+      },
+    },
+  ]);
+  
+  const salariesData = {
+    reason : "Salaries",
+    amount : -(salaryResult[0]?.salariesBudget),
+    salariesCount : salaryResult[0]?.salariesCount,
+  }
 
   results.push(ordersData)
+  results.push(salariesData)
   let realTotalProfit = results.reduce((total, item) => {
     return total + (item.amount || 0); 
   }, 0);
