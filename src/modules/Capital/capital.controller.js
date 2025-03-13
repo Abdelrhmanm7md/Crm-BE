@@ -1,4 +1,5 @@
 import { capitalModel } from "../../../database/models/capital.model.js";
+import { expensesModel } from "../../../database/models/expenses.model.js";
 import { orderModel } from "../../../database/models/order.model.js";
 import { productModel } from "../../../database/models/product.model.js";
 import { salaryModel } from "../../../database/models/salaries.model.js";
@@ -107,9 +108,38 @@ const getAllCapital = catchAsync(async (req, res, next) => {
     amount : -(salaryResult[0]?.salariesBudget),
     salariesCount : salaryResult[0]?.salariesCount,
   }
+  const expensesResult = await expensesModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        inCount: { $sum: { $cond: [{ $eq: ["$type", "in"] }, 1, 0] } },
+        inAmount: { 
+          $sum: { $cond: [{ $eq: ["$type", "in"] }, "$amount", 0] } 
+        },
+        outCount: { $sum: { $cond: [{ $eq: ["$type", "out"] }, 1, 0] } },
+        outAmount: { 
+          $sum: { $cond: [{ $eq: ["$type", "out"] }, "$amount", 0] } 
+        }
+      },
+    },
+  ]);
+
+  
+  const expensesData = {
+    reason : "IN",
+    amount : expensesResult[0]?.inAmount,
+    inCount : expensesResult[0]?.inCount,
+  }
+  const expensesData2 = {
+    reason : "OUT",
+    amount : -(expensesResult[0]?.outAmount),
+    outCount : expensesResult[0]?.outCount,
+  }
 
   results.push(ordersData)
   results.push(salariesData)
+  results.push(expensesData)
+  results.push(expensesData2)
   let realTotalProfit = results.reduce((total, item) => {
     return total + (item.amount || 0); 
   }, 0);
