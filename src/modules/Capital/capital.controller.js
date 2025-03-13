@@ -8,6 +8,9 @@ import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createCapital = catchAsync(async (req, res, next) => {  
     req.body.createdBy = req.user._id;
+    if(req.body.amount < 0){
+      return next(new Error("Amount can't be negative"));
+    }
     let newCapital = new capitalModel(req.body);
     let addedCapital = await newCapital.save({ context: { query: req.query } });
   
@@ -169,7 +172,9 @@ const getCapitalById = catchAsync(async (req, res, next) => {
 });
 const updateCapital = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-
+  if(req.body.amount < 0){
+    return next(new Error("Amount can't be negative"));
+  }
   let updatedCapital = await capitalModel.findByIdAndUpdate(id, req.body, {
     new: true,userId: req.userId, context: { query: req.query }
   });

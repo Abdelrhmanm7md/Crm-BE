@@ -1,10 +1,12 @@
 import { expensesModel } from "../../../database/models/expenses.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createExpenses = catchAsync(async (req, res, next) => {
   req.body.createdBy = req.user._id;
+  if(req.body.amount < 0){
+    return next(new Error("Amount can't be negative"));
+  }
   let newExpenses = new expensesModel(req.body);
   let addedExpenses = await newExpenses.save({ context: { query: req.query } });
 
@@ -52,24 +54,6 @@ const getAllExpensesSpecificDate = catchAsync(async (req, res, next) => {
   res.json({ message: "Done", results });
 });
 
-const exportExpenses = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    expensesModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 
 const getExpensesById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -87,7 +71,9 @@ const getExpensesById = catchAsync(async (req, res, next) => {
 });
 const updateExpenses = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-
+  if(req.body.amount < 0){
+    return next(new Error("Amount can't be negative"));
+  }
   let updatedExpenses = await expensesModel.findByIdAndUpdate(id, req.body, {
     new: true,
     userId: req.userId,
@@ -131,7 +117,6 @@ export {
   getAllExpenses,
   getAllExpensesToday,
   getAllExpensesSpecificDate,
-  exportExpenses,
   getExpensesById,
   deleteExpenses,
   updateExpenses,

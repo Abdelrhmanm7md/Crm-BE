@@ -1,10 +1,12 @@
 import { salaryModel } from "../../../database/models/salaries.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createSalary = catchAsync(async (req, res, next) => {  
     req.body.createdBy = req.user._id;
+    if(req.body.salary < 0){
+      return next(new Error("Salary can't be negative"));
+    }
     let newSalary = new salaryModel(req.body);
     let addedSalary = await newSalary.save({ context: { query: req.query } });
   
@@ -63,24 +65,6 @@ const getAllSalaryByMonth = catchAsync(async (req, res, next) => {
   res.json({ message: "Done", results });
 });
 
-const exportSalary = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    salaryModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 
 const getSalaryById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -190,7 +174,6 @@ export {
   createSalary,
   getAllSalary,
   getAllSalaryByMonth,
-  exportSalary,
   getSalaryById,
   deleteSalary,
   updateSalary,
