@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
+import generateUniqueId from "generate-unique-id";
 
 const productSchema = mongoose.Schema(
   {
@@ -13,7 +14,7 @@ const productSchema = mongoose.Schema(
     },
     SKU: {
       type: String,
-      required: true,
+      // required: true,
     },
     shortDescription: {
       type: String,
@@ -144,7 +145,14 @@ const productSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-
+productSchema.pre("save", async function (next) {
+    this.SKU =
+      generateUniqueId({
+        length: 4,
+        useLetters: false,
+      });
+  next();
+});
 productSchema.pre(
   /^delete/,
   { document: false, query: true },

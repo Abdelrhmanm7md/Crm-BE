@@ -7,7 +7,6 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 categoryRouter.get("/",protectRoutes, categoryController.getAllCategory);
 categoryRouter.get("/fetch/",protectRoutes, categoryController.fetchAllCategory);
-categoryRouter.get("/export/",protectRoutes, categoryController.exportCategory);
 categoryRouter.get("/:id",protectRoutes, categoryController.getCategoryById);
 categoryRouter.put("/:id",protectRoutes, categoryController.updateCategory);
 categoryRouter.post("/",protectRoutes, categoryController.createCategory);

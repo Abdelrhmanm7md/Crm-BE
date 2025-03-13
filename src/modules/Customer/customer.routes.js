@@ -6,7 +6,6 @@ import { protectRoutes } from "../auth/auth.controller.js";
 
 
 customerRouter.get("/",protectRoutes, customerController.getAllCustomer);
-customerRouter.get("/export/", protectRoutes,customerController.exportCustomer);
 customerRouter.get("/:id",protectRoutes, customerController.getCustomerById);
 customerRouter.put("/:id",protectRoutes, customerController.updateCustomer);
 customerRouter.post("/",protectRoutes, customerController.createCustomer);

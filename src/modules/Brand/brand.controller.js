@@ -1,6 +1,5 @@
 import { brandModel } from "../../../database/models/brand.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import axios from "axios";
 import cron from "node-cron";
@@ -35,24 +34,6 @@ const getAllBrand = catchAsync(async (req, res, next) => {
   res.json({ message: "Done", results });
 });
 
-const exportBrand = catchAsync(async (req, res, next) => {
-  // Define variables before passing them
-  const query = {};
-  const projection = { _id: 0 };
-  const selectedFields = req.query.selectedFields || [];
-  const specificIds = req.query.specificIds || [];
-
-  await exportData(
-    req,
-    res,
-    next,
-    brandModel,
-    query,
-    projection,
-    selectedFields,
-    specificIds
-  );
-});
 
 const getBrandById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
@@ -197,7 +178,6 @@ const fetchAllBrand = catchAsync(async (req, res, next) => {
 export {
   createBrand,
   getAllBrand,
-  exportBrand,
   getBrandById,
   deleteBrand,
   updateBrand,
