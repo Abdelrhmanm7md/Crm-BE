@@ -13,7 +13,12 @@ productRouter.get("/category/:categoryId",protectRoutes, productController.getAl
 productRouter.get("/brand/:brandId",protectRoutes, productController.getAllProductsByBrand);
 productRouter.get("/branch/:branchId",protectRoutes, productController.getAllProductsByBranch);
 productRouter.get("/supplier/:supplierId",protectRoutes, productController.getAllProductsBySupplier);
-productRouter.get("/fetch/", productController.fetchAllProducts);
+productRouter.get("/fetch/",protectRoutes, productController.fetchAllProducts);
+productRouter.post("/variation/:productId", productController.addProductVariation);
+productRouter.get("/variation/:productId/:variationId",productRouter, productController.getProductVariationById);
+
+productRouter.put("/variation/:productId/:variationId",productRouter, productController.updateProductVariation);
+productRouter.delete("/variation/:productId/:variationId",productRouter, productController.deleteProductVariation);
 
 productRouter.get("/:id",protectRoutes, productController.getProductById);
 productRouter.put("/bulk/",productRouter, productController.updateProductsBulk);

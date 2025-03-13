@@ -502,6 +502,87 @@ const fetchAllProducts = catchAsync(async (req, res, next) => {
   });
 });
 fetchAndStoreProducts();
+const addProductVariation = async (req, res) => {
+  try {
+    const { variation } = req.body;
+let {productId}=req.params;
+let userId = req.userId;
+    const product = await productModel.findByIdAndUpdate(
+      productId,
+      { $push: { productVariations: variation } }, // ✅ Push new variation
+      { new: true , userId: new mongoose.Types.ObjectId(userId)} // ✅ Return updated document
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    return res.status(200).json({ message: "Variation added successfully", product });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const getProductVariationById = async (req, res) => {
+  try {
+    const { productId, variationId } = req.params;
+
+    const product = await productModel.findOne(
+      { _id: productId, "productVariations._id": variationId },
+      { "productVariations.$": 1 } // ✅ Get only the matched variation
+    );
+
+    if (!product || !product.productVariations.length) {
+      return res.status(404).json({ message: "Variation not found" });
+    }
+
+    return res.status(200).json({ variation: product.productVariations[0] });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const updateProductVariation = async (req, res) => {
+  try {
+    const { productId, variationId } = req.params;
+    const updateData = req.body;
+
+    const product = await productModel.findOneAndUpdate(
+      { _id: productId, "productVariations._id": variationId },
+      { $set: { "productVariations.$": updateData } }, // ✅ Update the specific variation
+      { new: true,userId: new mongoose.Types.ObjectId(req.userId) } // ✅ Return updated document
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product or variation not found" });
+    }
+
+    return res.status(200).json({ message: "Variation updated successfully", product });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteProductVariation = async (req, res) => {
+  try {
+    const { productId, variationId } = req.params;
+
+    const product = await productModel.findByIdAndUpdate(
+      productId,
+      { $pull: { productVariations: { _id: variationId } } }, // ✅ Remove variation
+      { new: true,userId: new mongoose.Types.ObjectId(req.userId) } // ✅ Return updated document
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product or variation not found" });
+    }
+
+    return res.status(200).json({ message: "Variation deleted successfully", product });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 
 export {
   createProduct,
@@ -515,4 +596,8 @@ export {
   updateProduct,
   updateProductsBulk,
   fetchAllProducts,
+  addProductVariation,
+  getProductVariationById,
+  updateProductVariation,
+  deleteProductVariation,
 };
