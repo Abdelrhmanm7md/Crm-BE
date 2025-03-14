@@ -159,7 +159,6 @@ const getProductById = catchAsync(async (req, res, next) => {
   }
   Product = Product[0];
   Product = JSON.parse(JSON.stringify(Product));
-  console.log(await productLogsModel.find({ product: Product._id }).sort({ createdAt: -1 }));
   
   Product.transferLog = await productLogsModel.find({ product: Product._id }).sort({ createdAt: -1 }) || [];
   res.status(200).json({ message: "Done", Product });
@@ -173,6 +172,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
     userId: req.userId,
     context: { query: req.query },
   });
+  
   let message_1 = "Couldn't update!  not found!";
   if (req.query.lang == "ar") {
     message_1 = "تعذر التحديث! غير موجود!";

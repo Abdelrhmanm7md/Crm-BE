@@ -12,7 +12,8 @@ const orderSchema = mongoose.Schema(
     },
     SKU: {
       type: String,
-      required: true,
+      default: " ",
+      // required: true,
     },
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
@@ -159,13 +160,23 @@ orderSchema.pre("save", async function (next) {
   if (check2) {
     return next(new Error(err_2));
   }
-  if (this.orderNumber == " ")
+  if (this.orderNumber == " "){
+
     this.orderNumber =
-      "#" +
+    "#" +
+    generateUniqueId({
+      length: 4,
+      useLetters: false,
+    });
+  }
+    if (this.SKU == " "){
+      this.SKU =
       generateUniqueId({
         length: 4,
         useLetters: false,
       });
+    }
+
   next();
 });
 

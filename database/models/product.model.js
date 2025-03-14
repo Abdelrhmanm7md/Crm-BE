@@ -14,6 +14,7 @@ const productSchema = mongoose.Schema(
     },
     SKU: {
       type: String,
+      default: " ",
       // required: true,
     },
     shortDescription: {
@@ -146,11 +147,13 @@ const productSchema = mongoose.Schema(
 );
 
 productSchema.pre("save", async function (next) {
+  if (this.SKU == " "){
     this.SKU =
-      generateUniqueId({
-        length: 4,
-        useLetters: false,
-      });
+    generateUniqueId({
+      length: 4,
+      useLetters: false,
+    });
+  }
   next();
 });
 productSchema.pre(

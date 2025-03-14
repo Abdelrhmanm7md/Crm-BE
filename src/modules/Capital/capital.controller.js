@@ -3,6 +3,7 @@ import { expensesModel } from "../../../database/models/expenses.model.js";
 import { orderModel } from "../../../database/models/order.model.js";
 import { productModel } from "../../../database/models/product.model.js";
 import { salaryModel } from "../../../database/models/salaries.model.js";
+import { supplierOrderModel } from "../../../database/models/supplierOrder.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
@@ -111,6 +112,23 @@ const getAllCapital = catchAsync(async (req, res, next) => {
     amount : -(salaryResult[0]?.salariesBudget),
     salariesCount : salaryResult[0]?.salariesCount,
   }
+  const SupplierResult = await supplierOrderModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        Count: { $sum: 1 },
+        budget:{
+          $sum: { $sum: "$timeTablePayment.amount" } 
+        }
+      }
+    }
+  ]);
+  
+  const supplierData = {
+    reason : "Supplier Orders",
+    amount : -(SupplierResult[0]?.budget),
+    Count : SupplierResult[0]?.Count,
+  }
   const expensesResult = await expensesModel.aggregate([
     {
       $group: {
@@ -141,6 +159,7 @@ const getAllCapital = catchAsync(async (req, res, next) => {
 
   results.push(ordersData)
   results.push(salariesData)
+  results.push(supplierData)
   results.push(expensesData)
   results.push(expensesData2)
   let realTotalProfit = results.reduce((total, item) => {
