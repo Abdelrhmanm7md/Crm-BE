@@ -80,7 +80,7 @@ const getAllCapital = catchAsync(async (req, res, next) => {
           $sum: {
             $cond: [
               { $eq: ["$orderStatus", "completed"] }, 
-              { $subtract: ["$totalAmount", "$shippingPrice"] }, 
+              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, 
               0,
             ],
           },

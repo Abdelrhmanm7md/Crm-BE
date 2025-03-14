@@ -183,7 +183,7 @@ shippingCompanySchema.post("find", async function (docs) {
           $sum: {
             $cond: [
               { $in: ["$orderStatus", ["shipping", "completed"]] },
-              { $subtract: ["$totalAmount", "$shippingPrice"] }, // Subtract shippingPrice
+              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, // Subtract shippingPrice
               0
             ]
           }

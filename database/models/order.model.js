@@ -121,6 +121,11 @@ const orderSchema = mongoose.Schema(
       default: 0,
       required: true,
     },
+    realTotalAmount: {
+      type: Number,
+      default: 0,
+      required: true,
+    },
     fromWordPress: {
       type: Boolean,
       default: false,
