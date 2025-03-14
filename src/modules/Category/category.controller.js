@@ -161,8 +161,6 @@ cron.schedule("* * * * *", () => {
   fetchAndStoreCategory();
 });
 
-// Call once at startup
-fetchAndStoreCategory();
 
 const fetchAllCategory = catchAsync(async (req, res, next) => {
   fetchAndStoreCategory();

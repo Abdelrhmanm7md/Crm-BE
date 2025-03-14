@@ -141,14 +141,11 @@ const fetchAndStoreCoupons = async () => {
   }
 };
 
-// Call the function
-fetchAndStoreCoupons();
 cron.schedule("* * * * *", () => {
   console.log("🔄 Running scheduled product update...");
   fetchAndStoreCoupons();
 });
 
-// Call once at startup();
 
 const fetchAllCoupons = catchAsync(async (req, res, next) => {
   fetchAndStoreCoupons();

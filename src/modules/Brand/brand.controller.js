@@ -165,8 +165,6 @@ cron.schedule("* * * * *", () => {
   fetchAndStoreBrand();
 });
 
-// Call once at startup
-fetchAndStoreBrand();
 
 const fetchAllBrand = catchAsync(async (req, res, next) => {
   fetchAndStoreBrand();

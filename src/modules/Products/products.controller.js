@@ -501,7 +501,6 @@ const fetchAllProducts = catchAsync(async (req, res, next) => {
     message: "Done",
   });
 });
-fetchAndStoreProducts();
 const addProductVariation = async (req, res) => {
   try {
     const { variation } = req.body;
@@ -526,12 +525,9 @@ let userId = req.userId;
 const getProductVariationById = async (req, res) => {
   try {
     const { productId, variationId } = req.params;
-console.log("dddddddddddddddddddddddddddddddddd");
-console.log("Fetched Product:", JSON.stringify(product, null, 2));
-
+    
     const product = await productModel.findOne(
       { _id: productId, "productVariations._id": variationId },
-      { "productVariations.$": 1 } // ✅ Get only the matched variation
     ).lean({ autopopulate: false });
 
     if (!product || !product.productVariations.length) {
