@@ -526,11 +526,13 @@ let userId = req.userId;
 const getProductVariationById = async (req, res) => {
   try {
     const { productId, variationId } = req.params;
+console.log("dddddddddddddddddddddddddddddddddd");
+console.log("Fetched Product:", JSON.stringify(product, null, 2));
 
     const product = await productModel.findOne(
       { _id: productId, "productVariations._id": variationId },
       { "productVariations.$": 1 } // ✅ Get only the matched variation
-    );
+    ).lean({ autopopulate: false });
 
     if (!product || !product.productVariations.length) {
       return res.status(404).json({ message: "Variation not found" });
@@ -551,7 +553,7 @@ const updateProductVariation = async (req, res) => {
       { _id: productId, "productVariations._id": variationId },
       { $set: { "productVariations.$": updateData } }, // ✅ Update the specific variation
       { new: true,userId: new mongoose.Types.ObjectId(req.userId) } // ✅ Return updated document
-    );
+    ).lean();
 
     if (!product) {
       return res.status(404).json({ message: "Product or variation not found" });
@@ -571,7 +573,7 @@ const deleteProductVariation = async (req, res) => {
       productId,
       { $pull: { productVariations: { _id: variationId } } }, // ✅ Remove variation
       { new: true,userId: new mongoose.Types.ObjectId(req.userId) } // ✅ Return updated document
-    );
+    ).lean();
 
     if (!product) {
       return res.status(404).json({ message: "Product or variation not found" });
