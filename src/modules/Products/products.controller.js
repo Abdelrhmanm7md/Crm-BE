@@ -289,51 +289,19 @@ const deleteProducts = catchAsync(async (req, res, next) => {
     .json({ message: message_2, deletedCount: result.deletedCount });
 });
 
-// ✅ Fetch & Update Products
-const fetchAndStoreProducts = async () => {
-  try {
-    let page = 1;
-    let allProducts = [];
-    let totalFetched = 0;
-
-    // Fetch all WooCommerce products in pages
-    do {
-      const { data } = await axios.get(
-        "https://a2mstore.com/wp-json/wc/v3/products",
-        {
-          params: { per_page: 100, page },
-          auth: {
-            username: process.env.CONSUMERKEY,
-            password: process.env.CONSUMERSECRET,
-          },
-          headers: {
-            Authorization:
-              "Basic " +
-              Buffer.from(
-                `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
-              ).toString("base64"),
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      totalFetched = data.length;
-      allProducts.push(...data);
-      page++;
-    } while (totalFetched > 0);
-
-    console.log(`✅ Fetched ${allProducts.length} products from WooCommerce`);
-
-    // Process each product
-    for (const item of allProducts) {
-      const productSKU = item.id.toString();
-      let productVariations = [];
-
-      // Fetch Product Variations (if variable product)
-      if (item.type === "variable") {
-        const { data: variations } = await axios.get(
-          `https://a2mstore.com/wp-json/wc/v3/products/${item.id}/variations`,
+// ✅ Fetch & Update Productsconst fetchAndStoreProducts = async () => {
+  const fetchAndStoreProducts = async () => {
+    try {
+      let page = 1;
+      let allProducts = [];
+      let totalFetched = 0;
+  
+      // Fetch all WooCommerce products in pages
+      do {
+        const { data } = await axios.get(
+          "https://a2mstore.com/wp-json/wc/v3/products",
           {
+            params: { per_page: 100, page },
             auth: {
               username: process.env.CONSUMERKEY,
               password: process.env.CONSUMERSECRET,
@@ -348,147 +316,168 @@ const fetchAndStoreProducts = async () => {
             },
           }
         );
-
-        productVariations = variations.map((variation) => ({
-          quantity:
-            variation.stock_status === "instock" &&
-            typeof variation.stock_quantity === "number"
-              ? variation.stock_quantity
-              : 0,
-          photo: variation.image ? variation.image.src : undefined,
-          color:
-            variation.attributes.find(
-              (attr) => attr.name.toLowerCase() === "color"
-            )?.option || "",
-          size: variation.attributes
-            .filter((attr) => attr.name.toLowerCase() === "size")
-            .map((attr) => attr.option),
-          branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
-          weight: variation.weight,
-          dimensions: variation.dimensions,
-          sellingPrice: parseFloat(variation.regular_price) || 0,
-          salePrice: parseFloat(variation.sale_price) || 0,
-          costPrice:
-            parseFloat(
-              item.attributes.find((attr) => attr.name === "costPrice")
-                ?.options[0]
-            ) || 0,
-        }));
-      }
-
-      // Fetch categories
-      const categoryIds = await Promise.all(
-        item.categories.map(async (cat) => {
-          const existingCategory = await categoryModel.findOneAndUpdate(
-            { wordPressId: cat.id },
+  
+        totalFetched = data.length;
+        allProducts.push(...data);
+        page++;
+      } while (totalFetched > 0);
+  
+      console.log(`✅ Fetched ${allProducts.length} products from WooCommerce`);
+  
+      // Process each product
+      for (const item of allProducts) {
+        const productSKU = item.id.toString();
+        let productVariations = [];
+  
+        // Fetch Product Variations (if variable product)
+        if (item.type === "variable") {
+          const { data: variations } = await axios.get(
+            `https://a2mstore.com/wp-json/wc/v3/products/${item.id}/variations`,
             {
-              $setOnInsert: {
-                name: cat.name,
-                slug: cat.slug,
-                createdBy: process.env.WEBSITEADMIN,
-                SKU: `WP-${cat.id}`,
+              auth: {
+                username: process.env.CONSUMERKEY,
+                password: process.env.CONSUMERSECRET,
               },
-            },
-            { new: true, upsert: true }
-          );
-          return existingCategory._id;
-        })
-      );
-
-      // Fetch brands
-      const brandIds = await Promise.all(
-        item.brands.map(async (brand) => {
-          const existingBrand = await brandModel.findOneAndUpdate(
-            { wordPressId: brand.id },
-            {
-              $setOnInsert: {
-                name: brand.name,
-                slug: brand.slug,
-                createdBy: process.env.WEBSITEADMIN,
-                SKU: `WP-${brand.id}`,
+              headers: {
+                Authorization:
+                  "Basic " +
+                  Buffer.from(
+                    `${process.env.CONSUMERKEY}:${process.env.CONSUMERSECRET}`
+                  ).toString("base64"),
+                "Content-Type": "application/json",
               },
-            },
-            { new: true, upsert: true }
-          );
-          return existingBrand._id;
-        })
-      );
-
-      const existingProduct = await productModel.findOne({
-        wordPressId: productSKU,
-      });
-
-      const productData = {
-        name: item.name,
-        wordPressId: item.id.toString(),
-        SKU: item.sku || `WP-${item.id}`,
-        shortDescription: item.short_description || "",
-        description: item.description || "",
-        brand: brandIds,
-        category: categoryIds,
-        attributes: item.attributes.map((attr) => ({
-          name: attr.name,
-          value: attr.options.join(", "),
-        })),
-        pic: item.images.length > 0 ? item.images[0].src : undefined,
-        gallery: item.images.map((img) => img.src),
-        createdBy: process.env.WEBSITEADMIN,
-        fromWordPress: true,
-        productVariations: productVariations,
-      };
-
-      const storeEntry = {
-        branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
-        quantity:
-          item.stock_status === "instock" &&
-          typeof item.stock_quantity === "number"
-            ? item.stock_quantity
-            : 0,
-      };
-
-      // Update or create product
-      if (existingProduct) {
-        await productModel
-          .findOneAndUpdate(
-            {
-              _id: existingProduct._id,
-              "productVariations.branch": new mongoose.Types.ObjectId(
-                process.env.WEBSITEBRANCHID
-              ),
-            },
-            { $set: { productVariations } },
-            {
-              new: true,
-              userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
             }
-          )
-          .then(async (result) => {
-            if (!result) {
+          );
+  
+          productVariations = variations.map((variation) => ({
+            quantity:
+              variation.stock_status === "instock" &&
+              typeof variation.stock_quantity === "number"
+                ? variation.stock_quantity
+                : 0,
+            photo: variation.image ? variation.image.src : undefined,
+            color:
+              variation.attributes.find(
+                (attr) => attr.name.toLowerCase() === "color"
+              )?.option || "",
+            size: variation.attributes
+              .filter((attr) => attr.name.toLowerCase() === "size")
+              .map((attr) => attr.option),
+            branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+            weight: variation.weight,
+            dimensions: variation.dimensions,
+            sellingPrice: parseFloat(variation.regular_price) || 0,
+            salePrice: parseFloat(variation.sale_price) || 0,
+            costPrice:
+              parseFloat(
+                item.attributes.find((attr) => attr.name === "costPrice")
+                  ?.options[0]
+              ) || 0,
+          }));
+        }
+  
+        // Fetch categories
+        const categoryIds = await Promise.all(
+          item.categories.map(async (cat) => {
+            const existingCategory = await categoryModel.findOneAndUpdate(
+              { wordPressId: cat.id },
+              {
+                $setOnInsert: {
+                  name: cat.name,
+                  slug: cat.slug,
+                  createdBy: process.env.WEBSITEADMIN,
+                  SKU: `WP-${cat.id}`,
+                },
+              },
+              { new: true, upsert: true,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+            );
+            return existingCategory._id;
+          })
+        );
+  
+        // Fetch brands
+        const brandIds = await Promise.all(
+          item.brands.map(async (brand) => {
+            const existingBrand = await brandModel.findOneAndUpdate(
+              { wordPressId: brand.id },
+              {
+                $setOnInsert: {
+                  name: brand.name,
+                  slug: brand.slug,
+                  createdBy: process.env.WEBSITEADMIN,
+                  SKU: `WP-${brand.id}`,
+                },
+              },
+              { new: true, upsert: true,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+            );
+            return existingBrand._id;
+          })
+        );
+  
+        const existingProduct = await productModel.findOne({
+          wordPressId: productSKU,
+        });
+  
+        const productData = {
+          name: item.name,
+          wordPressId: item.id.toString(),
+          SKU: item.sku || `WP-${item.id}`,
+          shortDescription: item.short_description || "",
+          description: item.description || "",
+          brand: brandIds,
+          category: categoryIds,
+          attributes: item.attributes.map((attr) => ({
+            name: attr.name,
+            value: attr.options.join(", "),
+          })),
+          pic: item.images.length > 0 ? item.images[0].src : undefined,
+          gallery: item.images.map((img) => img.src),
+          createdBy: process.env.WEBSITEADMIN,
+          fromWordPress: true,
+        };
+  
+        if (existingProduct) {
+          // ✅ 1. UPDATE EXISTING VARIATIONS (AVOID DUPLICATES)
+          for (const variation of productVariations) {
+            const updatedProduct = await productModel.findOneAndUpdate(
+              {
+                _id: existingProduct._id,
+                "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+                "productVariations.color": variation.color,
+                "productVariations.size": variation.size,
+              },
+              {
+                $set: { "productVariations.$": variation },
+              },
+              { new: true ,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN)}
+            );
+  
+            // ✅ 2. ADD NEW VARIATION IF IT DOESN'T EXIST
+            if (!updatedProduct) {
               await productModel.findOneAndUpdate(
                 { _id: existingProduct._id },
-                { $push: { productVariations: storeEntry } },
-                {
-                  new: true,
-                  userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
-                }
+                { $addToSet: { productVariations: variation } }, // ✅ Add only if not existing
+                { new: true,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
               );
             }
+          }
+  
+          console.log(`✅ Updated Product: ${item.name}`);
+        } else {
+          // Create new product with variations
+          await productModel.create({
+            ...productData,
+            productVariations: productVariations,
           });
-        console.log(`✅ Updated Product: ${item.name}`);
-      } else {
-        await productModel.create({
-          ...productData,
-          productVariations: [storeEntry],
-        });
-        console.log(`✅ Created Product: ${item.name}`);
+          console.log(`✅ Created Product: ${item.name}`);
+        }
       }
+  
+      console.log("✅ Products updated successfully!");
+    } catch (error) {
+      console.error("❌ Error fetching products:", error.message);
     }
-    console.log("✅ Products updated successfully!");
-  } catch (error) {
-    console.error("❌ Error fetching products:", error.message);
-  }
-};
-
+  };
 // ✅ Schedule the function to run every 6 hours
 cron.schedule("* * * * *", () => {
   console.log("🔄 Running scheduled product update...");
