@@ -60,16 +60,35 @@ const updateInventory = catchAsync(async (req, res, next) => {
     const logs = [];
   
     for (const variant of transferProduct.ProductVariant) {
-      console.log("Looking for a match...");
-console.log(
-  product.productVariations.some(
-    (v) =>
-      v.branch?.toString() === transferProduct.mainStore?.toString() &&
-      v._id?.toString() === variant.id?.toString()
-  )
-);
-
       console.log("Checking variant:", variant);
+    
+      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2));
+    
+      console.log("Checking each product variation...");
+      product.productVariations.forEach((v) => {
+        console.log({
+          vBranch: v.branch,
+          vBranchString: v.branch?.toString(),
+          expectedBranch: transferProduct.mainStore,
+          expectedBranchString: transferProduct.mainStore?.toString(),
+          branchMatch: v.branch?.toString() === transferProduct.mainStore?.toString(),
+    
+          vId: v._id,
+          vIdString: v._id?.toString(),
+          expectedId: variant.id,
+          expectedIdString: variant.id?.toString(),
+          idMatch: v._id?.toString() === variant.id?.toString()
+        });
+      });
+    
+      console.log("Looking for a match...");
+      console.log(
+        product.productVariations.some(
+          (v) =>
+            v.branch?.toString() === transferProduct.mainStore?.toString() &&
+            v._id?.toString() === variant.id?.toString()
+        )
+      );
     
       const mainBranchVariant = product.productVariations.find((v) => {
         return (
@@ -135,7 +154,7 @@ console.log(
         dimensions: variant.dimensions,
         transferredBy: req.userId,
       });
-    }
+    }    
     
     await productLogsModel.insertMany(logs);
     await product.save();
