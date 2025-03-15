@@ -51,6 +51,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
   });
   if (transferProduct) {
     transferProduct.mainStore = process.env.MAINBRANCH;
+  console.log(transferProduct);
   
     let product = await productModel.findById(transferProduct.id);
     if (!product) {
