@@ -62,13 +62,14 @@ const updateInventory = catchAsync(async (req, res, next) => {
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
     
-      const mainBranchVariant = product.productVariations.find(
-        (v) =>
+      const mainBranchVariant = product.productVariations.find((v) => {
+        return (
           v.branch &&
           transferProduct.mainStore &&
           v.branch.equals(new mongoose.Types.ObjectId(transferProduct.mainStore)) &&
           v._id.equals(new mongoose.Types.ObjectId(variant.id))
-      );
+        );
+      });
     
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(
@@ -84,14 +85,15 @@ const updateInventory = catchAsync(async (req, res, next) => {
     
       mainBranchVariant.quantity -= variant.quantity;
     
-      let targetBranchVariant = product.productVariations.find(
-        (v) =>
+      let targetBranchVariant = product.productVariations.find((v) => {
+        return (
           v.branch &&
           variant.branch &&
           v.branch.equals(new mongoose.Types.ObjectId(variant.branch)) &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
-      );
+        );
+      });
     
       if (targetBranchVariant) {
         targetBranchVariant.quantity += variant.quantity;
@@ -125,7 +127,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
         transferredBy: req.userId,
       });
     }
-  
+    
     await productLogsModel.insertMany(logs);
     await product.save();
   
