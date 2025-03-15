@@ -438,37 +438,57 @@ const deleteProducts = catchAsync(async (req, res, next) => {
         };
   
         if (existingProduct) {
-          // ✅ 1. UPDATE EXISTING VARIATIONS (AVOID DUPLICATES)
           for (const variation of productVariations) {
-            const updatedProduct = await productModel.findOneAndUpdate(
-              {
-                _id: existingProduct._id,
-                "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
-                "productVariations.color": variation.color,
-                "productVariations.size": variation.size,
+            const filter = {
+              _id: existingProduct._id,
+              "productVariations.branch": new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+              "productVariations.color": variation.color,
+              "productVariations.size": variation.size,
+            };
+        
+            const update = {
+              $set: {
+                "productVariations.$.costPrice": variation.costPrice,
+                "productVariations.$.sellingPrice": variation.sellingPrice,
+                "productVariations.$.salePrice": variation.salePrice,
+                "productVariations.$.quantity": variation.quantity,
+                "productVariations.$.photo": variation.photo,
+                "productVariations.$.weight": variation.weight,
+                "productVariations.$.dimensions": variation.dimensions,
               },
-              {
-                $set: { "productVariations.$": variation },
-              },
-              { new: true ,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN)}
-            );
-  
-            // ✅ 2. ADD NEW VARIATION IF IT DOESN'T EXIST
+            };
+        
+            const updatedProduct = await productModel.findOneAndUpdate(filter, update, {
+              new: true,
+              userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
+            });
+        
+            // ✅ If no existing variation was updated, insert a new one
             if (!updatedProduct) {
               await productModel.findOneAndUpdate(
                 { _id: existingProduct._id },
-                { $addToSet: { productVariations: variation } }, // ✅ Add only if not existing
-                { new: true,userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+                { 
+                  $addToSet: { 
+                    productVariations: { 
+                      ...variation, 
+                      branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) 
+                    } 
+                  } 
+                },
+                { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
               );
             }
           }
-  
+        
           console.log(`✅ Updated Product: ${item.name}`);
         } else {
           // Create new product with variations
           await productModel.create({
             ...productData,
-            productVariations: productVariations,
+            productVariations: productVariations.map(v => ({
+              ...v,
+              branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID),
+            })),
           });
           console.log(`✅ Created Product: ${item.name}`);
         }
