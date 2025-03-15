@@ -60,34 +60,39 @@ const updateInventory = catchAsync(async (req, res, next) => {
     const logs = [];
   
     for (const variant of transferProduct.ProductVariant) {
+      console.log("Checking variant:", variant);
+    
       const mainBranchVariant = product.productVariations.find(
         (v) =>
-          // v.branch.toString() === transferProduct.mainStore.toString() &&
-          v._id.toString() === variant.id.toString()
+          v.branch &&
+          transferProduct.mainStore &&
+          v.branch.equals(new mongoose.Types.ObjectId(transferProduct.mainStore)) &&
+          v._id.equals(new mongoose.Types.ObjectId(variant.id))
       );
+    
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(
-          `Insufficient stock in MAINBRANCH. Available: ${
-            mainBranchVariant
-          }, Requested: ${variant.quantity}`
+          `Insufficient stock in MAINBRANCH. Available: ${mainBranchVariant?.quantity || 0}, Requested: ${variant.quantity}`
         );
-        
+    
         return res.status(400).json({
           message: `Insufficient stock in MAINBRANCH. Available: ${
             mainBranchVariant ? mainBranchVariant.quantity : 0
           }, Requested: ${variant.quantity}`,
         });
       }
-  
+    
       mainBranchVariant.quantity -= variant.quantity;
-  
+    
       let targetBranchVariant = product.productVariations.find(
         (v) =>
-          v.branch === variant.branch &&
+          v.branch &&
+          variant.branch &&
+          v.branch.equals(new mongoose.Types.ObjectId(variant.branch)) &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
       );
-  
+    
       if (targetBranchVariant) {
         targetBranchVariant.quantity += variant.quantity;
       } else {
@@ -101,14 +106,14 @@ const updateInventory = catchAsync(async (req, res, next) => {
           size: variant.size,
           weight: variant.weight,
           dimensions: variant.dimensions,
-          branch: variant.branch,
+          branch: new mongoose.Types.ObjectId(variant.branch),
         });
       }
-  
+    
       logs.push({
         product: transferProduct.id,
         fromBranch: new mongoose.Types.ObjectId(transferProduct.mainStore),
-        toBranch: variant.branch,
+        toBranch: new mongoose.Types.ObjectId(variant.branch),
         quantity: variant.quantity,
         costPrice: variant.costPrice,
         sellingPrice: variant.sellingPrice,
