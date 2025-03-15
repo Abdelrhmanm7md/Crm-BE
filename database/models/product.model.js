@@ -244,5 +244,7 @@ productSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("brand");
   this.populate("category");
+  this.populate("colors")
+  this.populate("size")
 })
 export const productModel = mongoose.model("product", productSchema);
