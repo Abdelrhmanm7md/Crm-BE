@@ -63,7 +63,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
     for (const variant of transferProduct.ProductVariant) {
       const mainBranchVariant = product.productVariations.find(
         (v) =>
-          v.branch.toString() === transferProduct.mainStore &&
+          v.branch=== transferProduct.mainStore &&
           v._id.toString() === variant.id.toString()
       );
   
