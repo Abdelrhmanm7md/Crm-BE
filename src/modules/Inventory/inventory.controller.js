@@ -83,7 +83,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
   
       let targetBranchVariant = product.productVariations.find(
         (v) =>
-          v.branch.toString() === variant.branch &&
+          v.branch === variant.branch &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
       );
