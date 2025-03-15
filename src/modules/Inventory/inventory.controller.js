@@ -60,6 +60,15 @@ const updateInventory = catchAsync(async (req, res, next) => {
     const logs = [];
   
     for (const variant of transferProduct.ProductVariant) {
+      console.log("Looking for a match...");
+console.log(
+  product.productVariations.some(
+    (v) =>
+      v.branch?.toString() === transferProduct.mainStore?.toString() &&
+      v._id?.toString() === variant.id?.toString()
+  )
+);
+
       console.log("Checking variant:", variant);
     
       const mainBranchVariant = product.productVariations.find((v) => {
