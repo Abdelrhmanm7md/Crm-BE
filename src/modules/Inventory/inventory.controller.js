@@ -52,77 +52,60 @@ const updateInventory = catchAsync(async (req, res, next) => {
   if (transferProduct) {
     transferProduct.mainStore = process.env.MAINBRANCH;
   
+    const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
+    transferProduct.mainStore = mainBranchId;
+
     let product = await productModel.findById(transferProduct.id);
     if (!product) {
       return res.status(404).json({ message: `Product not found: ${transferProduct.id}` });
     }
-  
+
     const logs = [];
-  
+
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
-    
+
       console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2));
-    
-      console.log("Checking each product variation...");
-      product.productVariations.forEach((v) => {
-        console.log({
-          vBranch: v.branch,
-          vBranchString: v.branch?.toString(),
-          expectedBranch: transferProduct.mainStore,
-          expectedBranchString: transferProduct.mainStore?.toString(),
-          branchMatch: v.branch?.toString() === transferProduct.mainStore?.toString(),
-    
-          vId: v._id,
-          vIdString: v._id?.toString(),
-          expectedId: variant.id,
-          expectedIdString: variant.id?.toString(),
-          idMatch: v._id?.toString() === variant.id?.toString()
-        });
-      });
-    
+
       console.log("Looking for a match...");
-      console.log(
-        product.productVariations.some(
-          (v) =>
-            v.branch?.toString() === transferProduct.mainStore?.toString() &&
-            v._id?.toString() === variant.id?.toString()
-        )
-      );
-    
+
       const mainBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch &&
-          transferProduct.mainStore &&
-          v.branch.equals(new mongoose.Types.ObjectId(transferProduct.mainStore)) &&
+          v._id &&
+          v.branch.equals(mainBranchId) &&
           v._id.equals(new mongoose.Types.ObjectId(variant.id))
         );
       });
-    
+
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(
           `Insufficient stock in MAINBRANCH. Available: ${mainBranchVariant?.quantity || 0}, Requested: ${variant.quantity}`
         );
-    
+
         return res.status(400).json({
           message: `Insufficient stock in MAINBRANCH. Available: ${
             mainBranchVariant ? mainBranchVariant.quantity : 0
           }, Requested: ${variant.quantity}`,
         });
       }
-    
+
+      // Deduct quantity from the main branch
       mainBranchVariant.quantity -= variant.quantity;
-    
+
+      // Convert target branch to ObjectId
+      const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
+
       let targetBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch &&
-          variant.branch &&
-          v.branch.equals(new mongoose.Types.ObjectId(variant.branch)) &&
+          v._id &&
+          v.branch.equals(targetBranchId) &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
-    
+
       if (targetBranchVariant) {
         targetBranchVariant.quantity += variant.quantity;
       } else {
@@ -136,14 +119,14 @@ const updateInventory = catchAsync(async (req, res, next) => {
           size: variant.size,
           weight: variant.weight,
           dimensions: variant.dimensions,
-          branch: new mongoose.Types.ObjectId(variant.branch),
+          branch: targetBranchId,
         });
       }
-    
+
       logs.push({
         product: transferProduct.id,
-        fromBranch: new mongoose.Types.ObjectId(transferProduct.mainStore),
-        toBranch: new mongoose.Types.ObjectId(variant.branch),
+        fromBranch: mainBranchId,
+        toBranch: targetBranchId,
         quantity: variant.quantity,
         costPrice: variant.costPrice,
         sellingPrice: variant.sellingPrice,
@@ -154,7 +137,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
         dimensions: variant.dimensions,
         transferredBy: req.userId,
       });
-    }    
+    }
     
     await productLogsModel.insertMany(logs);
     await product.save();
