@@ -25,6 +25,10 @@ const productSchema = mongoose.Schema(
       type: String,
       // required: true,
     },
+    status: {
+      type: String,
+      // required: true,
+    },
     brand: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -37,7 +41,13 @@ const productSchema = mongoose.Schema(
       // required: true,
     },
     colors: {
-      type: [String],
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "color",
+      default: [],
+    },
+    size: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "size",
       default: [],
     },
     attributes: {
@@ -128,11 +138,6 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // transferLog: {
-    //   type: [mongoose.Schema.Types.ObjectId],
-    //   ref: "productLog",
-    //   default:[],
-    // },
     supplierOrderAt: {
       type: Date,
       default: null,

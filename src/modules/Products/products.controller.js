@@ -424,6 +424,7 @@ const deleteProducts = catchAsync(async (req, res, next) => {
           SKU: item.sku || `WP-${item.id}`,
           shortDescription: item.short_description || "",
           description: item.description || "",
+          status:item.status,
           brand: brandIds,
           category: categoryIds,
           attributes: item.attributes.map((attr) => ({
