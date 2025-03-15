@@ -518,6 +518,7 @@ const getProductVariationById = async (req, res) => {
     
     const product = await productModel.findOne(
       { _id: productId, "productVariations._id": variationId },
+      { "productVariations.$": 1 } // This projects only the matching variation
     ).lean({ autopopulate: false });
 
     if (!product || !product.productVariations.length) {
