@@ -132,6 +132,10 @@ const productSchema = mongoose.Schema(
           ref: "branch",
           // required: true,
         },
+        // id:{
+        //   type: String,
+        //   // required: true,
+        // },
       },
     ],
     fromWordPress: {

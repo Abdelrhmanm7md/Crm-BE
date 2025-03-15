@@ -60,14 +60,10 @@ const updateInventory = catchAsync(async (req, res, next) => {
     const logs = [];
   
     for (const variant of transferProduct.ProductVariant) {
-      const mainBranchVariant = product.productVariations.find(
-        (v) =>
-          v.branch.toString() === transferProduct.mainStore.toString() &&
-          v._id.toString() === variant.id.toString()
+      const mainBranchVariant = product.productVariations.find((v) =>
+        v.branch.equals(new mongoose.Types.ObjectId(transferProduct.mainStore)) &&
+        v._id.equals(new mongoose.Types.ObjectId(variant.id))
       );
-      console.log("Product Variations:", product.productVariations);
-      console.log("Transfer Main Store:", transferProduct.mainStore);
-      console.log("Variant ID:", variant.id);
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(
           `Insufficient stock in MAINBRANCH. Available: ${
