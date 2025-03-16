@@ -41,13 +41,11 @@ const productSchema = mongoose.Schema(
       // required: true,
     },
     colors: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "color",
+      type: [String],
       default: [],
     },
     size: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "size",
+      type: [String],
       default: [],
     },
     attributes: {
@@ -132,13 +130,13 @@ const productSchema = mongoose.Schema(
           ref: "branch",
           // required: true,
         },
-        // id:{
-        //   type: String,
-        //   // required: true,
-        // },
       },
     ],
     fromWordPress: {
+      type: Boolean,
+      default: false,
+    },
+    feature: {
       type: Boolean,
       default: false,
     },
@@ -248,7 +246,5 @@ productSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("brand");
   this.populate("category");
-  this.populate("colors")
-  this.populate("size")
 })
 export const productModel = mongoose.model("product", productSchema);

@@ -425,6 +425,7 @@ const deleteProducts = catchAsync(async (req, res, next) => {
           shortDescription: item.short_description || "",
           description: item.description || "",
           status:item.status,
+          feature:item.feature,
           brand: brandIds,
           category: categoryIds,
           attributes: item.attributes.map((attr) => ({
