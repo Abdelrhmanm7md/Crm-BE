@@ -47,13 +47,13 @@ const getAllSupplier = catchAsync(async (req, res, next) => {
 const getSupplierById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let supplier = await supplierModel.findOne({ _id: id }); // ✅ Fetch a single document
+  let supplier = await supplierModel.find({ _id: id }); // ✅ Fetch a single document
   let message_1 = req.query.lang === "ar" ? "لم يتم العثور على مورد" : "No Supplier was found!";
 
   if (!supplier) {
     return res.status(404).json({ message: message_1 });
   }
-
+supplier = supplier[0];
   let orders = await supplierOrderModel.find({ supplier: supplier._id });
 
   supplier = supplier.toObject(); // ✅ Now it works because it's a single document
