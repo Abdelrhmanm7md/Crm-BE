@@ -1,3 +1,4 @@
+import { expensesModel } from "../../../database/models/expenses.model.js";
 import { salaryModel } from "../../../database/models/salaries.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
@@ -19,16 +20,7 @@ const createSalary = catchAsync(async (req, res, next) => {
 
 const getAllSalary = catchAsync(async (req, res, next) => {
   let ApiFeat = new ApiFeature(salaryModel.find(), req.query)
-    // .pagination()
-    // .filter()
-    // .sort()
-    // .search()
-    // .fields();
-//     let message_1 = "No Salary was found!"
-//     if(req.query.lang == "ar"){
-//       message_1 = "لم يتم العثور على عميل!"
-//     }
-//  !ApiFeat && res.status(404).json({ message: message_1 });
+
 
   let results = await ApiFeat.mongooseQuery;
   res.json({ message: "Done", results });
@@ -85,41 +77,76 @@ const updateSalary = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   let message_1 = "Couldn't update! Not found!";
   let message_2 = "Salary updated successfully!";
-  
-  if (req.query.lang == "ar") {
-    message_1 = "تعذر التحديث! غير موجود!";
-    message_2 = "تم تحديث الراتب بنجاح!";
+
+  if (req.query.lang === "ar") {
+      message_1 = "تعذر التحديث! غير موجود!";
+      message_2 = "تم تحديث الراتب بنجاح!";
+  }
+
+  if (typeof id === "string" && id.startsWith("[")) {
+      try {
+          id = JSON.parse(id);
+      } catch (error) {
+          return res.status(400).json({ message: "Invalid ID format" });
+      }
   }
 
   let updatedSalaries;
-  if (typeof id === "string" && id.startsWith("[")) {
-    try {
-      id = JSON.parse(id);
-    } catch (error) {
-      return res.status(400).json({ message: "Invalid ID format" });
-    }
-  }
   if (Array.isArray(id)) {
-    updatedSalaries = await salaryModel.updateMany(
-      { _id: { $in: id } }, 
-      { $set: req.body },
-      {
-        new: true,userId: req.userId, context: { query: req.query },
-       multi: true }
-    );
+      updatedSalaries = await salaryModel.updateMany(
+          { _id: { $in: id } },
+          { $set: req.body },
+          { new: true, userId: req.userId, context: { query: req.query }, multi: true }
+      );
   } else {
-    updatedSalaries = await salaryModel.findByIdAndUpdate(id, req.body, {
-      new: true,userId: req.userId, context: { query: req.query }
-    });
+      updatedSalaries = await salaryModel.findByIdAndUpdate(id, req.body, {
+          new: true, userId: req.userId, context: { query: req.query }
+      });
   }
 
   if (!updatedSalaries || (Array.isArray(id) && updatedSalaries.matchedCount === 0)) {
-    return res.status(404).json({ message: message_1 });
+      return res.status(404).json({ message: message_1 });
+  }
+
+  // ✅ Fetch updated salary to check paid months
+  const salary = await salaryModel.findById(id);
+
+  if (salary && Array.isArray(salary.timeTable)) {
+      // Group timeTable entries by month
+      const paidMonths = {};
+
+      salary.timeTable.forEach((entry) => {
+          if (entry.isPaid === true) {
+              const monthKey = `${entry.date.getFullYear()}-${entry.date.getMonth() + 1}`; // YYYY-M
+              paidMonths[monthKey] = true; // Mark month as paid
+          }
+      });
+
+      for (const monthKey of Object.keys(paidMonths)) {
+          const [year, month] = monthKey.split("-");
+
+          // ✅ Check if expense already exists for this month
+          const existingExpense = await expensesModel.findOne({
+              reason: `Salary Payment - ${salary.user}`,
+              amount: salary.salary, // Full monthly salary
+              description: `Salary for ${salary.user} - ${year}-${month.padStart(2, "0")}`
+          });
+
+          if (!existingExpense) {
+              await expensesModel.create({
+                  reason: `Salary Payment - ${salary.user}`,
+                  description: `Salary for ${salary.user} - ${year}-${month.padStart(2, "0")}`,
+                  type: "out",
+                  amount: salary.salary, // Full salary per month
+                  createdBy: req.user._id,
+              });
+          }
+      }
   }
 
   res.status(200).json({ 
-    message: message_2, 
-    updatedSalaries 
+      message: message_2, 
+      updatedSalaries 
   });
 });
 
