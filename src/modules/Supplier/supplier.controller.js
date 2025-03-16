@@ -47,35 +47,21 @@ const getAllSupplier = catchAsync(async (req, res, next) => {
 const getSupplierById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let supplier = await supplierModel.find({ _id: id });
-  let message_1 = "No Supplier was found!";
-  if (req.query.lang == "ar") {
-    message_1 = "لم يتم العثور على مورد";
-  }
+  let supplier = await supplierModel.findOne({ _id: id }); // ✅ Fetch a single document
+  let message_1 = req.query.lang === "ar" ? "لم يتم العثور على مورد" : "No Supplier was found!";
 
   if (!supplier) {
     return res.status(404).json({ message: message_1 });
   }
-supplier = supplier[0]; 
 
-  // const paymentData = await supplierOrderModel.aggregate([
-  //   { $match: { supplier: supplier._id } }, // Match orders for this supplier
-  //   { 
-  //     $group: { 
-  //       _id: "$supplier", 
-  //       totalRemainingPayment: { $sum: "$remainingPayment" } 
-  //     } 
-  //   }
-  // ]);
+  let orders = await supplierOrderModel.find({ supplier: supplier._id });
 
-  // let totalRemainingPayment = paymentData.length > 0 ? paymentData[0].totalRemainingPayment : 0;
-let orders = await supplierOrderModel.find({ supplier: supplier._id });
-supplier = supplier.toObject();
-supplier.orders=orders;
+  supplier = supplier.toObject(); // ✅ Now it works because it's a single document
+  supplier.orders = orders;
 
   res.status(200).json({ 
     message: "Done", 
-    results: { ...supplier.toObject() } 
+    results: supplier 
   });
 });
 
