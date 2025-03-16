@@ -1,7 +1,6 @@
 import { supplierModel } from "../../../database/models/supplier.model.js";
 import { supplierOrderModel } from "../../../database/models/supplierOrder.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 
 const createSupplier = catchAsync(async (req, res, next) => {

@@ -1,7 +1,7 @@
 import generateUniqueId from "generate-unique-id";
 import mongoose from "mongoose";
 import { logModel } from "./log.model.js";
-import { orderModel } from "./order.model.js";
+import { supplierOrderModel } from "./supplierOrder.model.js";
 
 const supplierSchema = mongoose.Schema(
   {
@@ -124,15 +124,13 @@ supplierSchema.post("find", async function (docs) {
 
   const supplierIds = docs.map(doc => doc._id);
 
-  const orderStats = await orderModel.aggregate([
-    { $match: { supplier: { $in: supplierIds } } },
+  const orderStats = await supplierOrderModel.aggregate([
+    { $match: { supplier: { $in: supplierIds } } }, 
     {
       $group: {
         _id: "$supplier",
         totalOrders: { $sum: 1 },
-        supplierOrders: {
-          $sum: 1,
-        },
+        supplierOrders: { $sum: 1 },
         totalAmount: { $sum: "$totalAmount" },
       },
     },
