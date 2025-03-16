@@ -58,21 +58,24 @@ const getSupplierById = catchAsync(async (req, res, next) => {
   }
 supplier = supplier[0]; 
 
-  const paymentData = await supplierOrderModel.aggregate([
-    { $match: { supplier: supplier._id } }, // Match orders for this supplier
-    { 
-      $group: { 
-        _id: "$supplier", 
-        totalRemainingPayment: { $sum: "$remainingPayment" } 
-      } 
-    }
-  ]);
+  // const paymentData = await supplierOrderModel.aggregate([
+  //   { $match: { supplier: supplier._id } }, // Match orders for this supplier
+  //   { 
+  //     $group: { 
+  //       _id: "$supplier", 
+  //       totalRemainingPayment: { $sum: "$remainingPayment" } 
+  //     } 
+  //   }
+  // ]);
 
-  let totalRemainingPayment = paymentData.length > 0 ? paymentData[0].totalRemainingPayment : 0;
+  // let totalRemainingPayment = paymentData.length > 0 ? paymentData[0].totalRemainingPayment : 0;
+let orders = await supplierOrderModel.find({ supplier: supplier._id });
+supplier = supplier.toObject();
+supplier.orders=orders;
 
   res.status(200).json({ 
     message: "Done", 
-    results: { ...supplier.toObject(), totalRemainingPayment } 
+    results: { ...supplier.toObject() } 
   });
 });
 

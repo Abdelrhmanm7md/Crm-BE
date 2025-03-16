@@ -32,9 +32,9 @@ const createOrder = catchAsync(async (req, res, next) => {
         return next(new AppError(err_1, 400));
       }
 
-      const storeItem = product.productVariations.find((variation) =>
-        variation.branch.some((b) => String(b) === String(req.body.branch))
-      );
+      const storeItem = product.productVariations.find(
+        (variation) => String(variation.branch) === String(req.body.branch)
+      );      
 
       if (!storeItem) {
         const err_2 =

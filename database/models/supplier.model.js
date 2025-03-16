@@ -28,14 +28,6 @@ const supplierSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    debitAmount: {
-      type: Number,
-      // required: true,
-    },
-    creditAmount: {
-      type: Number,
-      // required: true,
-    },
     collectionAmount: {
       type: Number,
       required: true,
@@ -125,13 +117,12 @@ supplierSchema.post("find", async function (docs) {
   const supplierIds = docs.map(doc => doc._id);
 
   const orderStats = await supplierOrderModel.aggregate([
-    { $match: { supplier: { $in: supplierIds } } }, 
+    { $match: { supplier: { $in: supplierIds } } },
     {
       $group: {
         _id: "$supplier",
-        totalOrders: { $sum: 1 },
         supplierOrders: { $sum: 1 },
-        totalAmount: { $sum: "$totalAmount" },
+        remainingPayment: { $sum: "$remainingPayment" },
       },
     },
   ]);
@@ -144,9 +135,7 @@ supplierSchema.post("find", async function (docs) {
   docs.forEach(doc => {
     const stat = statsMap.get(doc._id.toString());
     doc.ordersCount = stat?.supplierOrders || 0;
-    doc.collectionAmount =
-      ((stat?.totalAmount || 0) * (stat?.totalOrders || 0)) -
-      (stat?.supplierOrders || 0);
+    doc.collectionAmount =stat?.remainingPayment || 0
   });
 });
 
