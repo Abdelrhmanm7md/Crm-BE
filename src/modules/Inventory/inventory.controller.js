@@ -91,8 +91,12 @@ const updateInventory = catchAsync(async (req, res, next) => {
       }
 
       // Deduct quantity from the main branch
-      mainBranchVariant.quantity -= variant.quantity;
-
+      if (mainBranchVariant) {
+        mainBranchVariant.quantity -= variant.quantity;
+        product.markModified("productVariations"); // Ensure changes are tracked
+      } else {
+        console.log("Error: mainBranchVariant not found!");
+      }
       // Convert target branch to ObjectId
       const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
 
@@ -140,7 +144,11 @@ const updateInventory = catchAsync(async (req, res, next) => {
     }
     
     await productLogsModel.insertMany(logs);
-    await product.save();
+    await product.save().then(() => {
+      console.log("Product saved successfully.");
+    }).catch(err => {
+      console.error("Error saving product:", err);
+    });
   
     return res.status(200).json({ message: "Product Transfer successfully" });
   }

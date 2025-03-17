@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 import * as dotenv from "dotenv";
 import { logModel } from "../../../database/models/log.model.js";
 import { productLogsModel } from "../../../database/models/productTransferLog.model.js";
+import { orderModel } from "../../../database/models/order.model.js";
 dotenv.config();
 
 const createProduct = catchAsync(async (req, res, next) => {
@@ -593,6 +594,53 @@ const deleteProductVariation = async (req, res) => {
   }
 };
 
+const getMostSoldProduct = catchAsync(async (req, res, next) => {
+  let { startDate, endDate } = req.query;
+  let filter = {};
+
+  if (startDate || endDate) {
+    let start = startDate ? new Date(startDate) : new Date("1970-01-01"); // Default to very old date
+    let end = endDate ? new Date(endDate) : new Date(); // Default to current date
+    end.setHours(23, 59, 59, 999); // Include the entire endDate
+
+    filter.createdAt = { $gte: start, $lte: end };
+  }
+
+  const results = await orderModel.aggregate([
+    { $match: filter }, // Apply date filter if provided
+    { $unwind: "$productVariations" },
+    { 
+      $group: { 
+        _id: "$productVariations.product",
+        totalSold: { $sum: "$productVariations.quantity" }
+      }
+    },
+    { $sort: { totalSold: -1 } },
+    { 
+      $lookup: {
+        from: "products",
+        localField: "_id",
+        foreignField: "_id",
+        as: "productDetails"
+      }
+    },
+    { $unwind: "$productDetails" },
+    {
+      $project: {
+        _id: 1,
+        totalSold: 1,
+        productName: "$productDetails.name",
+        SKU: "$productDetails.SKU"
+      }
+    }
+  ]);
+
+  res.json({
+    message: "Done",
+    mostSoldProducts: results
+  });
+});
+
 
 export {
   createProduct,
@@ -610,4 +658,5 @@ export {
   getProductVariationById,
   updateProductVariation,
   deleteProductVariation,
+  getMostSoldProduct,
 };
