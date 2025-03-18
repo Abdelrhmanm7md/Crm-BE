@@ -53,10 +53,9 @@ const updateInventory = catchAsync(async (req, res, next) => {
     transferProduct.mainStore = process.env.MAINBRANCH;
   
     const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
-    transferProduct.mainStore = mainBranchId;
+    console.log("Main Branch ID:", mainBranchId.toString()); // Debugging
   
     let product = await productModel.findById(transferProduct.id);
-  
     if (!product) {
       return res.status(404).json({ message: `Product not found: ${transferProduct.id}` });
     }
@@ -66,20 +65,14 @@ const updateInventory = catchAsync(async (req, res, next) => {
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
   
-      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2));
-      console.log("Main Branch ID:", mainBranchId.toString());
-      
-      // Convert `variant.id` to ObjectId to ensure correct comparison
       const variantId = new mongoose.Types.ObjectId(variant.id);
       console.log("Variant ID (Converted):", variantId.toString());
   
-      console.log("Looking for a match...");
+      console.log("Looking for a match in MAINBRANCH...");
   
-      // Find the variant in MAINBRANCH
       const mainBranchVariant = product.productVariations.find((v) => {
+        console.log(`Checking variation: branch=${v.branch.toString()}, _id=${v._id.toString()}`);
         return (
-          v.branch && 
-          v._id && 
           v.branch.toString() === mainBranchId.toString() && 
           v._id.toString() === variantId.toString()
         );
@@ -110,8 +103,6 @@ const updateInventory = catchAsync(async (req, res, next) => {
       // Find the variant in the target branch
       let targetBranchVariant = product.productVariations.find((v) => {
         return (
-          v.branch &&
-          v._id &&
           v.branch.toString() === targetBranchId.toString() &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
@@ -160,7 +151,8 @@ const updateInventory = catchAsync(async (req, res, next) => {
     });
   
     return res.status(200).json({ message: "Product Transfer successfully" });
-  }  
+  }
+   
   
 
   let message_1 = "Couldn't update!  not found!";
