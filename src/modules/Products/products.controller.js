@@ -590,6 +590,7 @@ const deleteProductVariation = async (req, res) => {
     }
 
     const variation = product.productVariations[0];
+console.log("variation",variation);
 
     if (!variation) {
       return res.status(404).json({ message: "Variation not found" });
