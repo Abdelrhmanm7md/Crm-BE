@@ -92,9 +92,21 @@ const updateInventory = catchAsync(async (req, res, next) => {
         });
       }
   
-      // Deduct quantity from the main branch
-      mainBranchVariant.quantity -= variant.quantity;
-      product.markModified("productVariations");
+// Deduct quantity from the main branch
+mainBranchVariant.quantity -= variant.quantity;
+console.log(`Updated Main Branch Quantity: ${mainBranchVariant.quantity}`);
+
+product.markModified("productVariations");
+console.log("Marked productVariations as modified.");
+
+// Save the product
+try {
+  await product.save();
+  console.log("Product saved successfully.");
+} catch (err) {
+  console.error("Error saving product:", err);
+}
+
   
       // Convert target branch to ObjectId
       const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
