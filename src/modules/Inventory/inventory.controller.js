@@ -77,6 +77,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
           v._id.equals(new mongoose.Types.ObjectId(variant.id))
         );
       });
+console.log("mainBranchVariant:", mainBranchVariant);
 
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(

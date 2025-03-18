@@ -577,18 +577,68 @@ const updateProductVariation = async (req, res) => {
 const deleteProductVariation = async (req, res) => {
   try {
     const { productId, variationId } = req.params;
+    const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
 
-    const product = await productModel.findByIdAndUpdate(
-      productId,
-      { $pull: { productVariations: { _id: variationId } } }, // ✅ Remove variation
-      { new: true,userId: new mongoose.Types.ObjectId(req.userId) } // ✅ Return updated document
-    ).lean();
+    // Find the product with the specific variation
+    const product = await productModel.findOne(
+      { _id: productId, "productVariations._id": variationId },
+      { "productVariations.$": 1 } // Get only the matched variation
+    );
 
     if (!product) {
       return res.status(404).json({ message: "Product or variation not found" });
     }
 
-    return res.status(200).json({ message: "Variation deleted successfully", product });
+    const variation = product.productVariations[0];
+
+    if (!variation) {
+      return res.status(404).json({ message: "Variation not found" });
+    }
+
+    const variationBranchId = new mongoose.Types.ObjectId(variation.branch);
+
+    if (variationBranchId.equals(mainBranchId)) {
+      // ✅ If variation is from MAINBRANCH → Delete it directly
+      await productModel.findByIdAndUpdate(
+        productId,
+        { $pull: { productVariations: { _id: variationId } } },
+        { new: true }
+      );
+
+      return res.status(200).json({ message: "Variation deleted successfully" });
+    } else {
+      // 🔄 If variation is NOT from MAINBRANCH → Transfer quantity to MAINBRANCH
+      const updatedProduct = await productModel.findById(productId);
+
+      if (!updatedProduct) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      let mainBranchVariant = updatedProduct.productVariations.find((v) => {
+        return (
+          v.branch.equals(mainBranchId) &&
+          v.color === variation.color &&
+          JSON.stringify(v.size) === JSON.stringify(variation.size)
+        );
+      });
+
+      if (mainBranchVariant) {
+        mainBranchVariant.quantity += variation.quantity;
+      } else {
+        updatedProduct.productVariations.push({
+          ...variation,
+          branch: mainBranchId,
+        });
+      }
+
+      updatedProduct.productVariations = updatedProduct.productVariations.filter(
+        (v) => !v._id.equals(variationId)
+      );
+
+      await updatedProduct.save();
+
+      return res.status(200).json({ message: "Variation transferred and deleted", product: updatedProduct });
+    }
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
