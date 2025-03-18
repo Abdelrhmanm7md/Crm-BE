@@ -71,12 +71,12 @@ const updateInventory = catchAsync(async (req, res, next) => {
 
       const mainBranchVariant = product.productVariations.find((v) => {
         return (
-          v.branch &&
-          v._id &&
-          v.branch.equals(mainBranchId) &&
-          v._id.equals(new mongoose.Types.ObjectId(variant.id))
+          v.branch && 
+          v._id && 
+          v.branch.toString() === mainBranchId.toString() &&  // Compare as strings
+          v._id.toString() === variant.id.toString() // Ensure IDs match correctly
         );
-      });
+      });      
 console.log("mainBranchVariant:", mainBranchVariant);
 
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
