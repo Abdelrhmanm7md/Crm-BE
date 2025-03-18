@@ -156,11 +156,7 @@ try {
   
     await productLogsModel.insertMany(logs);
     
-    await product.save().then(() => {
-      console.log("Product saved successfully.");
-    }).catch(err => {
-      console.error("Error saving product:", err);
-    });
+    await product.save()
   
     return res.status(200).json({ message: "Product Transfer successfully" });
   }

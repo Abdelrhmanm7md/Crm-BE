@@ -602,7 +602,7 @@ const deleteProductVariation = async (req, res) => {
       await productModel.findByIdAndUpdate(
         productId,
         { $pull: { productVariations: { _id: variationId } } },
-        { new: true }
+        { new: true ,userId:new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
       );
 
       return res.status(200).json({ message: "Variation deleted successfully" });
@@ -615,10 +615,11 @@ const deleteProductVariation = async (req, res) => {
       }
 
       let mainBranchVariant = updatedProduct.productVariations.find((v) => {
+        console.log(`Checking variation: branch=${v.branch.toString()}, color=${v.color}, size=${JSON.stringify(v.size)}`);
         return (
-          v.branch.equals(mainBranchId) &&
-          v.color === variation.color &&
-          JSON.stringify(v.size) === JSON.stringify(variation.size)
+          v.branch.toString() === mainBranchId.toString() &&
+          v.color === variant.color &&
+          JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
 
