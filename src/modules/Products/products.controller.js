@@ -35,7 +35,7 @@ const createProduct = catchAsync(async (req, res, next) => {
 });
 
 const getAllProduct = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(productModel.find(), req.query);
+  let ApiFeat = new ApiFeature(productModel.find().sort({ createdAt: -1 }), req.query);
   await ApiFeat.pagination(); // Ensure pagination waits for total count
 
   let results = await ApiFeat.mongooseQuery;
@@ -640,7 +640,6 @@ console.log("variation",variation);
             branch: mainBranchId,
         });
     
-        console.log("Added new variation:", JSON.stringify(updatedProduct.productVariations, null, 2));
     }
 
       updatedProduct.productVariations = updatedProduct.productVariations.filter(
