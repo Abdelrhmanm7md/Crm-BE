@@ -628,10 +628,20 @@ console.log("variation",variation);
         mainBranchVariant.quantity += variation.quantity;
       } else {
         updatedProduct.productVariations.push({
-          ...variation,
-          branch: mainBranchId,
+            costPrice: variation.costPrice || 0,
+            sellingPrice: variation.sellingPrice || 0,
+            salePrice: variation.salePrice || 0,
+            quantity: variation.quantity || 0,  // Ensure quantity is not missing
+            photo: variation.photo || "",
+            color: variation.color || "",  // Default values to prevent missing data
+            size: variation.size || [],
+            weight: variation.weight || "",
+            dimensions: variation.dimensions || { length: "", width: "", height: "" },
+            branch: mainBranchId,
         });
-      }
+    
+        console.log("Added new variation:", JSON.stringify(updatedProduct.productVariations, null, 2));
+    }
 
       updatedProduct.productVariations = updatedProduct.productVariations.filter(
         (v) => !v._id.equals(variationId)
