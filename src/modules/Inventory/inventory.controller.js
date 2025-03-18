@@ -54,63 +54,70 @@ const updateInventory = catchAsync(async (req, res, next) => {
   
     const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
     transferProduct.mainStore = mainBranchId;
-
+  
     let product = await productModel.findById(transferProduct.id);
+  
     if (!product) {
       return res.status(404).json({ message: `Product not found: ${transferProduct.id}` });
     }
-
+  
     const logs = [];
-
+  
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
-
-      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2),"ttttttttttttttttttt");
-
+  
+      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2));
+      console.log("Main Branch ID:", mainBranchId.toString());
+      
+      // Convert `variant.id` to ObjectId to ensure correct comparison
+      const variantId = new mongoose.Types.ObjectId(variant.id);
+      console.log("Variant ID (Converted):", variantId.toString());
+  
       console.log("Looking for a match...");
-
+  
+      // Find the variant in MAINBRANCH
       const mainBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch && 
           v._id && 
-          v.branch.toString() === mainBranchId.toString() &&  // Compare as strings
-          v._id.toString() === variant.id.toString() // Ensure IDs match correctly
+          v.branch.toString() === mainBranchId.toString() && 
+          v._id.toString() === variantId.toString()
         );
-      });      
-console.log("mainBranchVariant:", mainBranchVariant);
-
+      });
+  
+      console.log("Found Main Branch Variant:", mainBranchVariant);
+  
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
         console.log(
           `Insufficient stock in MAINBRANCH. Available: ${mainBranchVariant?.quantity || 0}, Requested: ${variant.quantity}`
         );
-
+  
         return res.status(400).json({
           message: `Insufficient stock in MAINBRANCH. Available: ${
             mainBranchVariant ? mainBranchVariant.quantity : 0
           }, Requested: ${variant.quantity}`,
         });
       }
-
+  
       // Deduct quantity from the main branch
-      if (mainBranchVariant) {
-        mainBranchVariant.quantity -= variant.quantity;
-        product.markModified("productVariations"); // Ensure changes are tracked
-      } else {
-        console.log("Error: mainBranchVariant not found!");
-      }
+      mainBranchVariant.quantity -= variant.quantity;
+      product.markModified("productVariations"); // Ensure changes are tracked
+  
       // Convert target branch to ObjectId
       const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
-
+      console.log("Target Branch ID:", targetBranchId.toString());
+  
+      // Find the variant in the target branch
       let targetBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch &&
           v._id &&
-          v.branch.equals(targetBranchId) &&
+          v.branch.toString() === targetBranchId.toString() &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
-
+  
       if (targetBranchVariant) {
         targetBranchVariant.quantity += variant.quantity;
       } else {
@@ -127,7 +134,7 @@ console.log("mainBranchVariant:", mainBranchVariant);
           branch: targetBranchId,
         });
       }
-
+  
       logs.push({
         product: transferProduct.id,
         fromBranch: mainBranchId,
@@ -143,8 +150,9 @@ console.log("mainBranchVariant:", mainBranchVariant);
         transferredBy: req.userId,
       });
     }
-    
+  
     await productLogsModel.insertMany(logs);
+    
     await product.save().then(() => {
       console.log("Product saved successfully.");
     }).catch(err => {
@@ -152,7 +160,7 @@ console.log("mainBranchVariant:", mainBranchVariant);
     });
   
     return res.status(200).json({ message: "Product Transfer successfully" });
-  }
+  }  
   
 
   let message_1 = "Couldn't update!  not found!";
