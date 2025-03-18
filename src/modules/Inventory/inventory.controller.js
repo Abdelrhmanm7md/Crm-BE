@@ -65,7 +65,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
 
-      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2));
+      console.log("Product Variations:", JSON.stringify(product.productVariations, null, 2),"ttttttttttttttttttt");
 
       console.log("Looking for a match...");
 
