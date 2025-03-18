@@ -49,11 +49,11 @@ const updateInventory = catchAsync(async (req, res, next) => {
     userId: req.userId,
     context: { query: req.query },
   });
+
   if (transferProduct) {
     transferProduct.mainStore = process.env.MAINBRANCH;
-  
     const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
-    console.log("Main Branch ID:", mainBranchId.toString()); // Debugging
+    console.log("Main Branch ID:", mainBranchId.toString());
   
     let product = await productModel.findById(transferProduct.id);
     if (!product) {
@@ -64,17 +64,17 @@ const updateInventory = catchAsync(async (req, res, next) => {
   
     for (const variant of transferProduct.ProductVariant) {
       console.log("Checking variant:", variant);
-  
       const variantId = new mongoose.Types.ObjectId(variant.id);
       console.log("Variant ID (Converted):", variantId.toString());
   
       console.log("Looking for a match in MAINBRANCH...");
   
       const mainBranchVariant = product.productVariations.find((v) => {
-        console.log(`Checking variation: branch=${v.branch.toString()}, _id=${v._id.toString()}`);
+        console.log(`Checking variation: branch=${v.branch.toString()}, color=${v.color}, size=${JSON.stringify(v.size)}`);
         return (
-          v.branch.toString() === mainBranchId.toString() && 
-          v._id.toString() === variantId.toString()
+          v.branch.toString() === mainBranchId.toString() &&
+          v.color === variant.color &&
+          JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
   
@@ -94,13 +94,13 @@ const updateInventory = catchAsync(async (req, res, next) => {
   
       // Deduct quantity from the main branch
       mainBranchVariant.quantity -= variant.quantity;
-      product.markModified("productVariations"); // Ensure changes are tracked
+      product.markModified("productVariations");
   
       // Convert target branch to ObjectId
       const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
       console.log("Target Branch ID:", targetBranchId.toString());
   
-      // Find the variant in the target branch
+      // Find or create variant in the target branch
       let targetBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch.toString() === targetBranchId.toString() &&
@@ -152,8 +152,7 @@ const updateInventory = catchAsync(async (req, res, next) => {
   
     return res.status(200).json({ message: "Product Transfer successfully" });
   }
-   
-  
+    
 
   let message_1 = "Couldn't update!  not found!";
   let message_2 = "Inventory updated successfully!";
