@@ -495,12 +495,12 @@ const fetchAndStoreOrders = async () => {
         governorate: item.shipping.state || "Unknown",
         totalAmountBeforeDiscount: totalAmount,
         totalAmount: totalAmount + parseFloat(item.shipping_total),
-        realTotalAmount: totalAmount + parseFloat(item.shipping_total),
+        // realTotalAmount: totalAmount + parseFloat(item.shipping_total),
         orderStatus: item.status,
         productVariations: productVariations,
         fromWordPress: true,
         shippingPrice: parseFloat(item.shipping_total),
-        realShippingPrice: parseFloat(item.shipping_total),
+        // realShippingPrice: parseFloat(item.shipping_total),
         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
       };
 
