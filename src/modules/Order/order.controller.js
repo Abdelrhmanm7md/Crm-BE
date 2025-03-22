@@ -282,7 +282,7 @@ const updateOrder = catchAsync(async (req, res, next) => {
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
     req.body.realTotalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
-r
+
       req.body.updatedBy = req.userId;
 
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
