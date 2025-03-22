@@ -122,10 +122,10 @@ const createOrder = catchAsync(async (req, res, next) => {
       req.body.totalAmount =
         totalBeforeDiscount - discountAmount + shippingPrice;
       req.body.realTotalAmount =
-        totalBeforeDiscount - discountAmount + (realShippingPrice - shippingPrice);
+        totalBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
     } else {
       req.body.totalAmount = totalBeforeDiscount + shippingPrice;
-      req.body.realTotalAmount = totalBeforeDiscount + (realShippingPrice - shippingPrice);
+      req.body.realTotalAmount = totalBeforeDiscount + (Math.abs(realShippingPrice - shippingPrice));
     }
 
     // Create and save order
@@ -281,8 +281,8 @@ const updateOrder = catchAsync(async (req, res, next) => {
     req.body.totalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
     req.body.realTotalAmount =
-      req.body.totalAmountBeforeDiscount - discountAmount + (realShippingPrice - shippingPrice);
-
+      req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
+r
       req.body.updatedBy = req.userId;
 
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
