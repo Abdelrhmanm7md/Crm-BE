@@ -167,7 +167,7 @@ const getProductById = catchAsync(async (req, res, next) => {
 
 const updateProduct = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-
+  req.body.updatedBy = req.userId;
   const updatedProduct = await productModel.findByIdAndUpdate(id, req.body, {
     new: true,
     userId: req.userId,
@@ -457,6 +457,7 @@ const deleteProducts = catchAsync(async (req, res, next) => {
                 "productVariations.$.photo": variation.photo,
                 "productVariations.$.weight": variation.weight,
                 "productVariations.$.dimensions": variation.dimensions,
+                updatedBy: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
               },
             };
         
@@ -471,6 +472,7 @@ const deleteProducts = catchAsync(async (req, res, next) => {
                 { _id: existingProduct._id },
                 { 
                   $addToSet: { 
+                    updatedBy: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN),
                     productVariations: { 
                       ...variation, 
                       branch: new mongoose.Types.ObjectId(process.env.WEBSITEBRANCHID) 

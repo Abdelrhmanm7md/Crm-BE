@@ -283,7 +283,8 @@ const updateOrder = catchAsync(async (req, res, next) => {
     req.body.realTotalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + realShippingPrice;
 
-    // Update the order
+      req.body.updatedBy = req.userId;
+
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
       new: true,
       userId: req.userId,
@@ -495,16 +496,15 @@ const fetchAndStoreOrders = async () => {
         governorate: item.shipping.state || "Unknown",
         totalAmountBeforeDiscount: totalAmount,
         totalAmount: totalAmount + parseFloat(item.shipping_total),
-        // realTotalAmount: totalAmount + parseFloat(item.shipping_total),
         orderStatus: item.status,
         productVariations: productVariations,
         fromWordPress: true,
         shippingPrice: parseFloat(item.shipping_total),
-        // realShippingPrice: parseFloat(item.shipping_total),
         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
       };
 
       if (existingOrder) {
+        orderData.updatedBy = existingOrder.createdBy;
         await orderModel.findByIdAndUpdate(existingOrder._id, orderData, {
           runValidators: true,
           userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),

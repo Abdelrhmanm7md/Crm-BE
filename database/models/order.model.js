@@ -138,7 +138,12 @@ const orderSchema = mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
-      required: true,
+      // required: true,
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      // required: true,
     },
   },
   { timestamps: true }
@@ -352,5 +357,6 @@ orderSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("shippingCompany");
   this.populate("branch");
+  this.populate("updatedBy");
 });
 export const orderModel = mongoose.model("order", orderSchema);

@@ -149,6 +149,11 @@ const productSchema = mongoose.Schema(
       ref: "user",
       // required: true,
     },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      // required: true,
+    },
   },
   { timestamps: true }
 );
@@ -246,5 +251,6 @@ productSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("brand");
   this.populate("category");
+  this.populate("updatedBy");
 })
 export const productModel = mongoose.model("product", productSchema);
