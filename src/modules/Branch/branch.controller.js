@@ -64,7 +64,9 @@ const updateBranch = catchAsync(async (req, res, next) => {
 });
 const deleteBranch = catchAsync(async (req, res, next) => {
   let { id } = req.params;
-  
+if (id == process.env.WEBSITEBRANCHID || id == process.env.MAINBRANCH) {
+    return res.status(400).json({ message: "You can't delete main branch!" });
+  }
   // Find the branch first
   let branch = await branchModel.findById(id);
   let message_1 = "Couldn't delete! Not found!"

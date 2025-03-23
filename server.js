@@ -9,11 +9,13 @@ import dbConnection from "./database/DBConnection.js";
 import { init } from "./src/modules/index.js";
 import { globalError } from "./src/utils/middleWare/globalError.js";
 import { rateLimit } from 'express-rate-limit'
+import cron from "node-cron";
 
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import helmet from "helmet";
 import xssSanitizer from "./src/utils/middleWare/sanitization.js";
+import { logModel } from "./database/models/log.model.js";
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
@@ -60,6 +62,17 @@ app.use((err, req, res, next) => {
 init(app);
 app.use(globalError);
 
+cron.schedule('0 0 * * *', async () => {
+  try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const result = await logModel.deleteMany({ createdAt: { $lt: sevenDaysAgo } });
+      console.log(`Deleted ${result.deletedCount} old logs.`);
+  } catch (error) {
+      console.error('Error deleting old logs:', error);
+  }
+});
 
 app.listen(process.env.PORT || 8000, () =>
   console.log(`Server is running on port ${process.env.PORT || 8000}!`)
