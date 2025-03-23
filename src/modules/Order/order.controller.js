@@ -124,7 +124,7 @@ const createOrder = catchAsync(async (req, res, next) => {
       req.body.realTotalAmount =
         totalBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
     } else {
-      req.body.totalAmount = totalBeforeDiscount + shippingPrice;
+      req.body.totalAmount = parseFloat(totalBeforeDiscount) + parseFloat(shippingPrice);
       req.body.realTotalAmount = totalBeforeDiscount + (Math.abs(realShippingPrice - shippingPrice));
     }
 
