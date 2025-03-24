@@ -168,21 +168,6 @@ productSchema.pre("save", async function (next) {
   }
   next();
 });
-productSchema.pre(
-  /^delete/,
-  { document: false, query: true },
-  async function () {
-    const doc = await this.model.findOne(this.getFilter());
-    if (doc) {
-      doc.pic && removeFile("products", doc.pic);
-      if (Array.isArray(doc.gallery) && doc.gallery.length > 0) {
-        doc.gallery.forEach((file) => {
-          removeFile("products", file);
-        });
-      }
-    }
-  }
-);
 
 productSchema.pre("save", async function (next) {
   await logModel.create({
