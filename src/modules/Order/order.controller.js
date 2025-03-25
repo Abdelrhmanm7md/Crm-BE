@@ -156,7 +156,7 @@ const getAllOrder = catchAsync(async (req, res, next) => {
 const getOrderById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let result = await orderModel.findById(id);
+  let result = await orderModel.findById(id).populate("productVariations.product");
   let message_1 = "No Order was found!";
   if (req.query.lang == "ar") {
     message_1 = "لا يوجد طلبات!";
