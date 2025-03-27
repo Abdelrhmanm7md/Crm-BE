@@ -81,6 +81,11 @@ const shippingCompanySchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    orders: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "order",
+      default: [],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
