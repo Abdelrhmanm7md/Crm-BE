@@ -202,7 +202,7 @@ shippingCompanySchema.post("find", async function (docs) {
     },
     {
       $lookup: {
-        from: "orders",  // Ensure this is the actual MongoDB collection name
+        from: "order",  // Ensure this is the actual MongoDB collection name
         localField: "orders",
         foreignField: "_id",
         as: "orders"
