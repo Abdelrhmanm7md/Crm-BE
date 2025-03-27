@@ -48,26 +48,32 @@ const exportShippingCompany = catchAsync(async (req, res, next) => {
 const getShippingCompanyById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let shippingCompany = await shippingCompanyModel.find({ _id: id });
-  let message_1 = "shipping Company not found!";
+  let shippingCompanies = await shippingCompanyModel.find({ _id: id });
+
+  let message_1 = "Shipping Company not found!";
   if (req.query.lang == "ar") {
     message_1 = "لم يتم العثور على شركة الشحن";
   }
 
-  if (!shippingCompany || shippingCompany.length === 0) {
+  if (!shippingCompanies || shippingCompanies.length === 0) {
     return res.status(404).json({ message: message_1 });
   }
 
-  shippingCompany = shippingCompany[0];
-  let orders =
-    (await orderModel
-      .find({ shippingCompany: id, orderStatus: "shipping" })
-      .exec()) || [];
-      shippingCompany = shippingCompany.toObject(); 
-      console.log(orders,"orders");
-      
-      shippingCompany.orders = orders;
-        res.status(200).json({ message: "Done", shippingCompany });
+  // Convert the first document to an object
+  let shippingCompany = shippingCompanies[0].toObject();
+
+  // Fetch related orders
+  let orders = await orderModel
+    .find({ shippingCompany: id, orderStatus: "shipping" })
+    .select("_id orderStatus realTotalAmount realShippingPrice shippingCompany") // Fetch only needed fields
+    .lean(); // Convert results to plain JS objects for easier manipulation
+
+  console.log("Orders Found:", orders);
+
+  // Attach orders manually
+  shippingCompany.orders = orders || [];
+
+  res.status(200).json({ message: "Done", shippingCompany });
 });
 
 const updateShippingCompany = catchAsync(async (req, res, next) => {
