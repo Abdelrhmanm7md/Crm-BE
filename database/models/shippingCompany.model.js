@@ -5,117 +5,55 @@ import { orderModel } from "./order.model.js";
 
 const shippingCompanySchema = mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      // minLength: [2, "too short shipping Company name"],
-    },
-    addresses: [
+    name: { type: String, required: true },
+    addresses: [{ address: { type: String, required: true } }],
+    company: { type: String },
+    postCode: { type: String },
+    email: { type: String, required: [true, "Email is required"], default: null },
+    governorate: { type: String, required: [true, "Governorate is required"] },
+    country: { type: String, required: [true, "Country is required"] },
+    shippingCompanyCode: { type: String, unique: true },
+    phone: { type: String },
+    priceList: [
       {
-        address: { type: String, required: true },
+        name: { type: String },
+        price: { type: String },
       },
     ],
-    company: {
-      type: String,
-      // required: [true, "Company is a required field."],
-    },
-    postCode: {
-      type: String,
-      // required: [true, "postCode is a required field."],
-    },
-    email: {
-      type: String,
-      required: [true, "Phone is a required field."],
-      default: null,
-    },
-    governorate: {
-      type: String,
-      required: [true, "Governorate is a required field."],
-    },
-    country: {
-      type: String,
-      required: [true, "Country is a required field."],
-    },
-    shippingCompanyCode: {
-      type: String,
-      uniqe: true,
-      // required: true,
-    },
-    ordersCount: {
-      type: Number,
-      // required: true,
-    },
-    priceList: {
-      type: [
-        {
-          name: {
-            type: String,
-            // required: true,
-          },
-          price: {
-            type: String,
-            // required: true,
-          },
-        },
-      ],
-    },
-    phone: {
-      type: String,
-    },
     collectionDoneAmount: [
       {
-        date:{
-          type:Date,
-        },
-        amount:{
-          type:Number,
-        }
-    }],
-    collectionAmount: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-    ordersCount: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
+        date: { type: Date },
+        amount: { type: Number },
+      },
+    ],
+    collectionAmount: { type: Number, required: true, default: 0 },
+    ordersCount: { type: Number, required: true, default: 0 },
     orders: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "order",
       default: [],
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
-      required: true,
-    },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   },
   { timestamps: true }
 );
 
+// ✅ Pre-save: Generate Unique Code and Validate Phone Number
 shippingCompanySchema.pre("save", async function (next) {
   this.shippingCompanyCode =
-    "S" +
-    generateUniqueId({
-      length: 4,
-      useLetters: false,
-    });
+    "S" + generateUniqueId({ length: 4, useLetters: false });
+
   let check = await shippingCompanyModel.findOne({ phone: this.phone });
-  const queryData = this.$locals.queryData;
-  let err_1 = "this phone number is already registered.";
-  if (queryData?.lang == "ar") {
-    err_1 = "هذا رقم الهاتف مسجل بالفعل";
-  }
   if (check) {
-    throw new Error(err_1);
+    throw new Error("This phone number is already registered.");
   }
   next();
 });
+
+// ✅ Pre-save: Log Creation
 shippingCompanySchema.pre("save", async function (next) {
   await logModel.create({
-    user: this.createdBy, // assuming you have a createdBy field
+    user: this.createdBy,
     action: "create Shipping Company",
     targetModel: "Shipping Company",
     targetId: this._id,
@@ -124,24 +62,25 @@ shippingCompanySchema.pre("save", async function (next) {
   next();
 });
 
+// ✅ Pre-update: Log Updates
 shippingCompanySchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const shippingCompanyId = this.getQuery()._id || this.getQuery().id;
-  const actionBy = this.options.userId; // ✅ Get userId from query options
+  const actionBy = this.options.userId;
 
   if (!shippingCompanyId) return next();
 
   const beforeUpdate = await this.model.findById(shippingCompanyId).lean();
-  if (!beforeUpdate) return next(); // If shippingCompany doesn't exist, skip logging
+  if (!beforeUpdate) return next();
 
   try {
     await logModel.create({
-      user: actionBy, // Store the user who performed the update
+      user: actionBy,
       action: "update shippingCompany",
       targetModel: "shippingCompany",
       targetId: shippingCompanyId,
       before: beforeUpdate,
-      after: update, // Stores the update object only (not the full document)
+      after: update,
     });
   } catch (error) {
     console.error("Error logging shippingCompany update:", error);
@@ -150,24 +89,22 @@ shippingCompanySchema.pre("findOneAndUpdate", async function (next) {
   next();
 });
 
-shippingCompanySchema.pre(
-  "deleteOne",
-  { document: true, query: false },
-  async function (next) {
-    const actionBy = this.userId; // ✅ Attach userId manually
+// ✅ Pre-delete: Log Deletions
+shippingCompanySchema.pre("deleteOne", { document: true, query: false }, async function (next) {
+  const actionBy = this.userId;
 
-    await logModel.create({
-      user: actionBy,
-      action: "delete shippingCompany",
-      targetModel: "shippingCompany",
-      targetId: this._id,
-      before: this.toObject(),
-    });
+  await logModel.create({
+    user: actionBy,
+    action: "delete shippingCompany",
+    targetModel: "shippingCompany",
+    targetId: this._id,
+    before: this.toObject(),
+  });
 
-    next();
-  }
-);
+  next();
+});
 
+// ✅ Post-find Middleware: Attach Orders Data
 shippingCompanySchema.post("find", async function (docs) {
   if (!docs.length) return;
 
@@ -175,20 +112,20 @@ shippingCompanySchema.post("find", async function (docs) {
 
   const orderStats = await orderModel.aggregate([
     { 
-      $match: { shippingCompany: { $in: shippingCompanyIds } } 
+      $match: { 
+        shippingCompany: { $in: shippingCompanyIds } 
+      } 
     },
     {
       $group: {
         _id: "$shippingCompany",
         totalOrders: { $sum: 1 },
-        shippingOrders: {
-          $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] },
-        },
+        shippingOrders: { $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] } },
         totalAmount: {
           $sum: {
             $cond: [
               { $in: ["$orderStatus", ["shipping", "completed"]] },
-              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, 
+              { $subtract: ["$realTotalAmount", "$realShippingPrice"] },
               0
             ]
           }
@@ -197,19 +134,20 @@ shippingCompanySchema.post("find", async function (docs) {
     },
     {
       $lookup: {
-        from: "order",  // Ensure "orders" is the correct MongoDB collection name
+        from: "orders", // ✅ Ensure this matches the actual collection name
         let: { shippingCompanyId: "$_id" },
         pipeline: [
           { $match: { $expr: { $eq: ["$shippingCompany", "$$shippingCompanyId"] } } },
-          { $match: { orderStatus: "shipping" } }, // Only get orders with status "shipping"
-          { $project: { _id: 1, orderStatus: 1, realTotalAmount: 1 } } // Select only needed fields
+          { $match: { orderStatus: "shipping" } },
+          { $project: { _id: 1, orderStatus: 1, realTotalAmount: 1 } }
         ],
         as: "orders"
       }
     }
   ]);
 
-  // Attach results to `docs`
+  console.log("🚀 Order Stats:", JSON.stringify(orderStats, null, 2));
+
   const statsMap = new Map();
   orderStats.forEach((stat) => {
     statsMap.set(stat._id.toString(), stat);
@@ -217,22 +155,24 @@ shippingCompanySchema.post("find", async function (docs) {
 
   docs.forEach((doc) => {
     const stat = statsMap.get(doc._id.toString());
-    doc.ordersCount = stat?.shippingOrders || 0;
-    doc.collectionAmount = stat?.totalAmount || 0;
-    doc.totalOrdersCount = stat?.totalOrders || 0;
-    doc.orders = stat?.orders || [];  // Assign orders directly
+    const plainDoc = doc.toObject(); // ✅ Convert to plain JSON object
+
+    plainDoc.ordersCount = stat?.shippingOrders || 0;
+    plainDoc.collectionAmount = stat?.totalAmount || 0;
+    plainDoc.totalOrdersCount = stat?.totalOrders || 0;
+    plainDoc.orders = stat?.orders || [];
 
     let amount = 0;
-    if (Array.isArray(doc.collectionDoneAmount)) {
-        doc.collectionDoneAmount.forEach((item) => {
-            amount += item.amount;
-        });
+    if (Array.isArray(plainDoc.collectionDoneAmount)) {
+      plainDoc.collectionDoneAmount.forEach((item) => {
+        amount += item.amount;
+      });
     }
-    doc.collectionAmount -= amount;
+    plainDoc.collectionAmount -= amount;
+
+    Object.assign(doc, plainDoc); // ✅ Merge changes back to Mongoose document
   });
 });
 
-export const shippingCompanyModel = mongoose.model(
-  "shippingCompany",
-  shippingCompanySchema
-);
+// ✅ Export Model
+export const shippingCompanyModel = mongoose.model("shippingCompany", shippingCompanySchema);
