@@ -193,12 +193,14 @@ shippingCompanySchema.post("find", async function (docs) {
             ]
           }
         },
-        orders:{
-          $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0]
+        orders: {
+          $push: { 
+            $cond: [{ $eq: ["$orderStatus", "shipping"] }, "$_id", "$$REMOVE"] 
+          }
         }
       },
     }
-  ]);
+  ]);  
 
   const statsMap = new Map();
   orderStats.forEach((stat) => {
