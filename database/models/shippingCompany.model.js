@@ -81,11 +81,6 @@ const shippingCompanySchema = mongoose.Schema(
       required: true,
       default: 0,
     },
-    orders: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "order",
-      // required: true,
-    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -192,44 +187,44 @@ shippingCompanySchema.post("find", async function (docs) {
               0
             ]
           }
-        },
-        orders: {
-          $push: { 
-            $cond: [{ $eq: ["$orderStatus", "shipping"] }, "$_id", "$$REMOVE"] 
-          }
         }
       }
     },
     {
       $lookup: {
-        from: "order",  // Ensure this is the actual MongoDB collection name
-        localField: "orders",
-        foreignField: "_id",
+        from: "orders",  // Ensure "orders" is the correct MongoDB collection name
+        let: { shippingCompanyId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$shippingCompany", "$$shippingCompanyId"] } } },
+          { $match: { orderStatus: "shipping" } }, // Only get orders with status "shipping"
+          { $project: { _id: 1, orderStatus: 1, realTotalAmount: 1 } } // Select only needed fields
+        ],
         as: "orders"
       }
     }
-  ]); 
+  ]);
 
+  // Attach results to `docs`
   const statsMap = new Map();
   orderStats.forEach((stat) => {
     statsMap.set(stat._id.toString(), stat);
   });
-docs.forEach((doc) => {
-  const stat = statsMap.get(doc._id.toString());
-  doc.ordersCount = stat?.shippingOrders || 0;
-  doc.collectionAmount = stat?.totalAmount || 0;
-  doc.totalOrdersCount = stat?.totalOrders || 0;
-  doc.orders = stat?.orders || 0;
 
-  let amount = 0;
-  if (Array.isArray(doc.collectionDoneAmount)) {
-      doc.collectionDoneAmount.forEach((item) => {
-          amount += item.amount;
-      });
-  }
+  docs.forEach((doc) => {
+    const stat = statsMap.get(doc._id.toString());
+    doc.ordersCount = stat?.shippingOrders || 0;
+    doc.collectionAmount = stat?.totalAmount || 0;
+    doc.totalOrdersCount = stat?.totalOrders || 0;
+    doc.orders = stat?.orders || [];  // Assign orders directly
 
-  doc.collectionAmount -= amount;
-});
+    let amount = 0;
+    if (Array.isArray(doc.collectionDoneAmount)) {
+        doc.collectionDoneAmount.forEach((item) => {
+            amount += item.amount;
+        });
+    }
+    doc.collectionAmount -= amount;
+  });
 });
 
 export const shippingCompanyModel = mongoose.model(
