@@ -105,62 +105,73 @@ shippingCompanySchema.pre("deleteOne", { document: true, query: false }, async f
 });
 
 shippingCompanySchema.post("find", async function (docs) {
-  if (!docs.length) return;
-
-  const shippingCompanyIds = docs.map((doc) => doc._id);
-
-  const orderStats = await orderModel.aggregate([
-    { 
-      $match: { shippingCompany: { $in: shippingCompanyIds } } 
-    },
-    {
-      $group: {
-        _id: "$shippingCompany",
-        totalOrders: { $sum: 1 },
-        shippingOrders: { $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] } },
-        totalAmount: {
-          $sum: {
-            $cond: [
-              { $in: ["$orderStatus", ["shipping", "completed"]] },
-              { $subtract: ["$realTotalAmount", "$realShippingPrice"] },
-              0
-            ]
+  shippingCompanySchema.post("find", async function (docs) {
+    if (!docs.length) return;
+  
+    const shippingCompanyIds = docs.map((doc) => doc._id);
+  
+    const orderStats = await orderModel.aggregate([
+      { 
+        $match: { shippingCompany: { $in: shippingCompanyIds } } 
+      },
+      {
+        $group: {
+          _id: "$shippingCompany",
+          totalOrders: { $sum: 1 },
+          shippingOrders: { $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] } },
+          totalAmount: {
+            $sum: {
+              $cond: [
+                { $in: ["$orderStatus", ["shipping", "completed"]] },
+                { $subtract: ["$realTotalAmount", "$realShippingPrice"] },
+                0
+              ]
+            }
           }
         }
       }
-    }
-  ]);
-
-  console.log("🚀 Order Stats:", JSON.stringify(orderStats, null, 2));
-
-  const statsMap = new Map();
-  orderStats.forEach((stat) => {
-    statsMap.set(stat._id.toString(), stat);
-  });
-
-  for (const doc of docs) {
-    const stat = statsMap.get(doc._id.toString());
-
-    const orders = await orderModel
-      .find({ shippingCompany: doc._id, orderStatus: "shipping" })
-      .select("_id orderStatus realTotalAmount realShippingPrice") 
-      .lean(); 
-
-    Object.assign(doc, {
-      ordersCount: stat?.shippingOrders || 0,
-      collectionAmount: stat?.totalAmount || 0,
-      totalOrdersCount: stat?.totalOrders || 0,
-      orders: orders || []
+    ]);
+  
+    console.log("🚀 Order Stats:", JSON.stringify(orderStats, null, 2));
+  
+    const ordersByCompany = await orderModel
+      .find({ shippingCompany: { $in: shippingCompanyIds }, orderStatus: "shipping" })
+      .select("_id orderStatus realTotalAmount realShippingPrice shippingCompany")
+      .lean(); // ✅ Convert to plain JS object to prevent unnecessary processing
+  
+    const ordersMap = new Map();
+    ordersByCompany.forEach(order => {
+      if (!ordersMap.has(order.shippingCompany.toString())) {
+        ordersMap.set(order.shippingCompany.toString(), []);
+      }
+      ordersMap.get(order.shippingCompany.toString()).push(order);
     });
-
-    let amount = 0;
-    if (Array.isArray(doc.collectionDoneAmount)) {
-      doc.collectionDoneAmount.forEach((item) => {
-        amount += item.amount;
+  
+    const statsMap = new Map();
+    orderStats.forEach((stat) => {
+      statsMap.set(stat._id.toString(), stat);
+    });
+  
+    for (const doc of docs) {
+      const stat = statsMap.get(doc._id.toString());
+  
+      // ✅ Directly attach without triggering additional Mongoose queries
+      Object.assign(doc, {
+        ordersCount: stat?.shippingOrders || 0,
+        collectionAmount: stat?.totalAmount || 0,
+        totalOrdersCount: stat?.totalOrders || 0,
+        orders: ordersMap.get(doc._id.toString()) || [] // ✅ Get orders from preloaded map
       });
+  
+      let amount = 0;
+      if (Array.isArray(doc.collectionDoneAmount)) {
+        doc.collectionDoneAmount.forEach((item) => {
+          amount += item.amount;
+        });
+      }
+      doc.collectionAmount -= amount;
     }
-    doc.collectionAmount -= amount;
-  }
-});
+  });
+});  
   
 export const shippingCompanyModel = mongoose.model("shippingCompany", shippingCompanySchema);
