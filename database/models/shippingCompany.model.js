@@ -188,7 +188,7 @@ shippingCompanySchema.post("find", async function (docs) {
           $sum: {
             $cond: [
               { $in: ["$orderStatus", ["shipping", "completed"]] },
-              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, 
+              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, // Subtract shippingPrice
               0
             ]
           }
@@ -198,22 +198,17 @@ shippingCompanySchema.post("find", async function (docs) {
             $cond: [{ $eq: ["$orderStatus", "shipping"] }, "$_id", "$$REMOVE"] 
           }
         }
-      }
-    },
-    {
-      $lookup: {
-        from: "orders",
-        localField: "orders",
-        foreignField: "_id",
-        as: "orders"
-      }
+      },
     }
-  ]);
+  ]);  
 
   const statsMap = new Map();
   orderStats.forEach((stat) => {
     statsMap.set(stat._id.toString(), stat);
   });
+  for (let stat of orderStats) {
+    stat.orders = await orderModel.find({ _id: { $in: stat.orders } });
+  }
 docs.forEach((doc) => {
   const stat = statsMap.get(doc._id.toString());
   doc.ordersCount = stat?.shippingOrders || 0;
