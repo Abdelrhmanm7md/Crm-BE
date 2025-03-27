@@ -104,75 +104,68 @@ shippingCompanySchema.pre("deleteOne", { document: true, query: false }, async f
   next();
 });
 
-// ✅ Post-find Middleware: Attach Orders Data
-shippingCompanySchema.post("find", async function (docs) {
-  if (!docs.length) return;
-
-  const shippingCompanyIds = docs.map((doc) => doc._id);
-
-  const orderStats = await orderModel.aggregate([
-    { 
-      $match: { 
-        shippingCompany: { $in: shippingCompanyIds } 
-      } 
-    },
-    {
-      $group: {
-        _id: "$shippingCompany",
-        totalOrders: { $sum: 1 },
-        shippingOrders: { $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] } },
-        totalAmount: {
-          $sum: {
-            $cond: [
-              { $in: ["$orderStatus", ["shipping", "completed"]] },
-              { $subtract: ["$realTotalAmount", "$realShippingPrice"] },
-              0
-            ]
+  shippingCompanySchema.post("find", async function (docs) {
+    if (!docs.length) return;
+  
+    const shippingCompanyIds = docs.map((doc) => doc._id);
+  
+    const orderStats = await orderModel.aggregate([
+      { 
+        $match: { 
+          shippingCompany: { $in: shippingCompanyIds } 
+        } 
+      },
+      {
+        $group: {
+          _id: "$shippingCompany",
+          totalOrders: { $sum: 1 },
+          shippingOrders: { $sum: { $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0] } },
+          totalAmount: {
+            $sum: {
+              $cond: [
+                { $in: ["$orderStatus", ["shipping", "completed"]] },
+                { $subtract: ["$realTotalAmount", "$realShippingPrice"] },
+                0
+              ]
+            }
           }
         }
       }
-    },
-    {
-      $lookup: {
-        from: "orders", // ✅ Ensure this matches the actual collection name
-        let: { shippingCompanyId: "$_id" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$shippingCompany", "$$shippingCompanyId"] } } },
-          { $match: { orderStatus: "shipping" } },
-          { $project: { _id: 1, orderStatus: 1, realTotalAmount: 1 } }
-        ],
-        as: "orders"
+    ]);
+  
+    console.log("🚀 Order Stats:", JSON.stringify(orderStats, null, 2));
+  
+    const statsMap = new Map();
+    orderStats.forEach((stat) => {
+      statsMap.set(stat._id.toString(), stat);
+    });
+  
+    for (const doc of docs) {
+      const stat = statsMap.get(doc._id.toString());
+      const plainDoc = doc.toObject(); // Convert to plain JSON object
+  
+      plainDoc.ordersCount = stat?.shippingOrders || 0;
+      plainDoc.collectionAmount = stat?.totalAmount || 0;
+      plainDoc.totalOrdersCount = stat?.totalOrders || 0;
+  
+      // 🔥 Populate orders field
+      plainDoc.orders = await orderModel
+        .find({ shippingCompany: doc._id, orderStatus: "shipping" })
+        .select("orderStatus realTotalAmount realShippingPrice") // Select only required fields
+        .lean(); // Convert to plain objects
+  
+      let amount = 0;
+      if (Array.isArray(plainDoc.collectionDoneAmount)) {
+        plainDoc.collectionDoneAmount.forEach((item) => {
+          amount += item.amount;
+        });
       }
+      plainDoc.collectionAmount -= amount;
+  
+      Object.assign(doc, plainDoc); // Merge changes back to Mongoose document
     }
-  ]);
-
-  console.log("🚀 Order Stats:", JSON.stringify(orderStats, null, 2));
-
-  const statsMap = new Map();
-  orderStats.forEach((stat) => {
-    statsMap.set(stat._id.toString(), stat);
   });
-
-  docs.forEach((doc) => {
-    const stat = statsMap.get(doc._id.toString());
-    const plainDoc = doc.toObject(); // ✅ Convert to plain JSON object
-
-    plainDoc.ordersCount = stat?.shippingOrders || 0;
-    plainDoc.collectionAmount = stat?.totalAmount || 0;
-    plainDoc.totalOrdersCount = stat?.totalOrders || 0;
-    plainDoc.orders = stat?.orders || [];
-
-    let amount = 0;
-    if (Array.isArray(plainDoc.collectionDoneAmount)) {
-      plainDoc.collectionDoneAmount.forEach((item) => {
-        amount += item.amount;
-      });
-    }
-    plainDoc.collectionAmount -= amount;
-
-    Object.assign(doc, plainDoc); // ✅ Merge changes back to Mongoose document
-  });
-});
+  
 
 // ✅ Export Model
 export const shippingCompanyModel = mongoose.model("shippingCompany", shippingCompanySchema);
