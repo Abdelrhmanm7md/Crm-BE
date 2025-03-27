@@ -28,11 +28,6 @@ const shippingCompanySchema = mongoose.Schema(
     ],
     collectionAmount: { type: Number, required: true, default: 0 },
     ordersCount: { type: Number, required: true, default: 0 },
-    orders: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "order",
-      default: [],
-    },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
   },
   { timestamps: true }
