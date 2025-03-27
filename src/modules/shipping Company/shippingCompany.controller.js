@@ -15,7 +15,7 @@ const createShippingCompany = catchAsync(async (req, res, next) => {
   
 
 const getAllShippingCompany = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(shippingCompanyModel.find().populate("orders"), req.query)
+  let ApiFeat = new ApiFeature(shippingCompanyModel.find(), req.query)
   await ApiFeat.pagination()
     // .pagination()
     // .filter()
@@ -33,7 +33,7 @@ const getAllShippingCompany = catchAsync(async (req, res, next) => {
 
 const exportShippingCompany = catchAsync(async (req, res, next) => {
   // Define variables before passing them
-    let ApiFeat = new ApiFeature(shippingCompanyModel.find().populate("orders"), req.query);
+    let ApiFeat = new ApiFeature(shippingCompanyModel.find(), req.query);
     let results = await ApiFeat.mongooseQuery;
   
     res.json({
@@ -46,7 +46,7 @@ const exportShippingCompany = catchAsync(async (req, res, next) => {
 const getShippingCompanyById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let shippingCompany = await shippingCompanyModel.find({ _id: id }).populate("orders");
+  let shippingCompany = await shippingCompanyModel.find({ _id: id });
   let message_1 = "shipping Company not found!"
   if(req.query.lang == "ar"){
     message_1 = "لم يتم العثور على شركة الشحن"
