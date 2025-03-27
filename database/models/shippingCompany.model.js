@@ -192,7 +192,7 @@ shippingCompanySchema.post("find", async function (docs) {
     },
     {
       $lookup: {
-        from: "orders",  // Ensure "orders" is the correct MongoDB collection name
+        from: "order",  // Ensure "orders" is the correct MongoDB collection name
         let: { shippingCompanyId: "$_id" },
         pipeline: [
           { $match: { $expr: { $eq: ["$shippingCompany", "$$shippingCompanyId"] } } },
