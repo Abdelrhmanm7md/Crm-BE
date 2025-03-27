@@ -81,6 +81,11 @@ const shippingCompanySchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    orders: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "order",
+      // required: true,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -187,6 +192,9 @@ shippingCompanySchema.post("find", async function (docs) {
               0
             ]
           }
+        },
+        orders:{
+          $cond: [{ $eq: ["$orderStatus", "shipping"] }, 1, 0]
         }
       },
     }
@@ -200,6 +208,8 @@ docs.forEach((doc) => {
   const stat = statsMap.get(doc._id.toString());
   doc.ordersCount = stat?.shippingOrders || 0;
   doc.collectionAmount = stat?.totalAmount || 0;
+  doc.totalOrdersCount = stat?.totalOrders || 0;
+  doc.orders = stat?.orders || 0;
 
   let amount = 0;
   if (Array.isArray(doc.collectionDoneAmount)) {
@@ -211,7 +221,9 @@ docs.forEach((doc) => {
   doc.collectionAmount -= amount;
 });
 });
-
+shippingCompanySchema.pre(/^find/, function () {
+  this.populate("orders");
+});
 export const shippingCompanyModel = mongoose.model(
   "shippingCompany",
   shippingCompanySchema
