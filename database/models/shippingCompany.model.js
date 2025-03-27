@@ -223,9 +223,7 @@ docs.forEach((doc) => {
   doc.collectionAmount -= amount;
 });
 });
-shippingCompanySchema.pre(/^find/, function () {
-  this.populate("orders");
-});
+
 export const shippingCompanyModel = mongoose.model(
   "shippingCompany",
   shippingCompanySchema
