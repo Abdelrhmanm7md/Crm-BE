@@ -81,11 +81,6 @@ const shippingCompanySchema = mongoose.Schema(
       required: true,
       default: 0,
     },
-    orders:{
-      type: [mongoose.Schema.Types.ObjectId],
-      required: true,
-      default: [],
-    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -205,9 +200,6 @@ docs.forEach(async (doc) => {
   const stat = statsMap.get(doc._id.toString());
   doc.ordersCount = stat?.shippingOrders || 0;
   doc.collectionAmount = stat?.totalAmount || 0;
-  doc.orders = await orderModel
-  .find({ shippingCompany: { $in: shippingCompanyIds }, orderStatus: "shipping" })
-  .exec() || [];
 
   let amount = 0;
   if (Array.isArray(doc.collectionDoneAmount)) {
@@ -217,7 +209,6 @@ docs.forEach(async (doc) => {
   }
 
   doc.collectionAmount -= amount;
-  console.log("doc", doc);
   
 });
 });
