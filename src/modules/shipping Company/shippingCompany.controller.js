@@ -64,6 +64,8 @@ const getShippingCompanyById = catchAsync(async (req, res, next) => {
       .find({ shippingCompany: id, orderStatus: "shipping" })
       .exec()) || [];
       shippingCompany = shippingCompany.toObject(); 
+      console.log(orders,"orders");
+      
       shippingCompany.orders = orders;
         res.status(200).json({ message: "Done", shippingCompany });
 });
