@@ -82,7 +82,7 @@ const shippingCompanySchema = mongoose.Schema(
       default: 0,
     },
     orders:{
-      type: [String],
+      type: [mongoose.Schema.Types.ObjectId],
       required: true,
       default: [],
     },
