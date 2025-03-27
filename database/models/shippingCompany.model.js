@@ -132,7 +132,7 @@ shippingCompanySchema.post("find", async function (docs) {
   const ordersByCompany = await orderModel
     .find({ shippingCompany: { $in: shippingCompanyIds }, orderStatus: "shipping" })
     .select("_id orderStatus realTotalAmount realShippingPrice shippingCompany")
-    .exec();  // ❌ Remove `.lean()` for debugging
+    .exec();
 
   console.log("🛒 Orders Found:", JSON.stringify(ordersByCompany, null, 2));
 
@@ -152,12 +152,10 @@ shippingCompanySchema.post("find", async function (docs) {
   for (const doc of docs) {
     const stat = statsMap.get(doc._id.toString());
 
-    Object.assign(doc, {
-      ordersCount: stat?.shippingOrders || 0,
-      collectionAmount: stat?.totalAmount || 0,
-      totalOrdersCount: stat?.totalOrders || 0,
-      orders: ordersMap.get(doc._id.toString()) || [] 
-    });
+    doc.set("ordersCount", stat?.shippingOrders || 0);
+    doc.set("collectionAmount", stat?.totalAmount || 0);
+    doc.set("totalOrdersCount", stat?.totalOrders || 0);
+    doc.set("orders", ordersMap.get(doc._id.toString()) || []);
 
     let amount = 0;
     if (Array.isArray(doc.collectionDoneAmount)) {
@@ -165,7 +163,7 @@ shippingCompanySchema.post("find", async function (docs) {
         amount += item.amount;
       });
     }
-    doc.collectionAmount -= amount;
+    doc.set("collectionAmount", doc.collectionAmount - amount);
   }
 });
   
