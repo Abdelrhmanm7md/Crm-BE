@@ -44,75 +44,55 @@ const getInventoryById = catchAsync(async (req, res, next) => {
 const updateInventory = catchAsync(async (req, res, next) => {
   let { id } = req.params;
   let { transferProduct } = req.body;
-  let updatedInventory = await inventoryModel.findByIdAndUpdate(id, req.body, {
-    new: true,
-    userId: req.userId,
-    context: { query: req.query },
-  });
+
+  let updatedInventory = await inventoryModel.findByIdAndUpdate(
+    id,
+    req.body,
+    { new: true }
+  );
+
+  if (!updatedInventory) {
+    return res.status(404).json({
+      message: req.query.lang == "ar" ? "تعذر التحديث! غير موجود!" : "Couldn't update! Not found!",
+    });
+  }
 
   if (transferProduct) {
     transferProduct.mainStore = process.env.MAINBRANCH;
     const mainBranchId = new mongoose.Types.ObjectId(process.env.MAINBRANCH);
-    console.log("Main Branch ID:", mainBranchId.toString());
-  
+
     let product = await productModel.findById(transferProduct.id);
     if (!product) {
       return res.status(404).json({ message: `Product not found: ${transferProduct.id}` });
     }
-  
+
     const logs = [];
-  
+
     for (const variant of transferProduct.ProductVariant) {
-      console.log("Checking variant:", variant);
       const variantId = new mongoose.Types.ObjectId(variant.id);
-      console.log("Variant ID (Converted):", variantId.toString());
-  
-      console.log("Looking for a match in MAINBRANCH...");
-  
+
       const mainBranchVariant = product.productVariations.find((v) => {
-        console.log(`Checking variation: branch=${v.branch.toString()}, color=${v.color}, size=${JSON.stringify(v.size)}`);
         return (
           v.branch.toString() === mainBranchId.toString() &&
           v.color === variant.color &&
           JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
-  
-      console.log("Found Main Branch Variant:", mainBranchVariant);
-  
+
       if (!mainBranchVariant || mainBranchVariant.quantity < variant.quantity) {
-        console.log(
-          `Insufficient stock in MAINBRANCH. Available: ${mainBranchVariant?.quantity || 0}, Requested: ${variant.quantity}`
-        );
-  
         return res.status(400).json({
           message: `Insufficient stock in MAINBRANCH. Available: ${
             mainBranchVariant ? mainBranchVariant.quantity : 0
           }, Requested: ${variant.quantity}`,
         });
       }
-  
-// Deduct quantity from the main branch
-mainBranchVariant.quantity -= variant.quantity;
-console.log(`Updated Main Branch Quantity: ${mainBranchVariant.quantity}`);
 
-product.markModified("productVariations");
-console.log("Marked productVariations as modified.");
+      mainBranchVariant.quantity -= variant.quantity;
+      product.markModified("productVariations");
+      await product.save();
 
-// Save the product
-try {
-  await product.save();
-  console.log("Product saved successfully.");
-} catch (err) {
-  console.error("Error saving product:", err);
-}
-
-  
-      // Convert target branch to ObjectId
       const targetBranchId = new mongoose.Types.ObjectId(variant.branch);
-      console.log("Target Branch ID:", targetBranchId.toString());
-  
-      // Find or create variant in the target branch
+
       let targetBranchVariant = product.productVariations.find((v) => {
         return (
           v.branch.toString() === targetBranchId.toString() &&
@@ -120,7 +100,7 @@ try {
           JSON.stringify(v.size) === JSON.stringify(variant.size)
         );
       });
-  
+
       if (targetBranchVariant) {
         targetBranchVariant.quantity += variant.quantity;
       } else {
@@ -137,7 +117,7 @@ try {
           branch: targetBranchId,
         });
       }
-  
+
       logs.push({
         product: transferProduct.id,
         fromBranch: mainBranchId,
@@ -152,28 +132,102 @@ try {
         dimensions: variant.dimensions,
         transferredBy: req.userId,
       });
+
+      // Add transfer details to inventory
+      updatedInventory.transferProduct.push({
+        product: transferProduct.id,
+        fromBranch: mainBranchId,
+        toBranch: targetBranchId,
+        quantity: variant.quantity,
+        costPrice: variant.costPrice,
+        sellingPrice: variant.sellingPrice,
+        salePrice: variant.salePrice,
+        color: variant.color,
+        size: variant.size,
+        weight: variant.weight,
+        dimensions: variant.dimensions,
+        transferredBy: req.userId,
+      });
     }
-  
+
     await productLogsModel.insertMany(logs);
-    
-    await product.save()
-  
-    return res.status(200).json({ message: "Product Transfer successfully" });
-  }
-    
-
-  let message_1 = "Couldn't update!  not found!";
-  let message_2 = "Inventory updated successfully!";
-  if (req.query.lang == "ar") {
-    message_1 = "تعذر التحديث! غير موجود!";
-    message_2 = "تم تحديث العميل بنجاح!";
-  }
-  if (!updatedInventory) {
-    return res.status(404).json({ message: message_1 });
+    await updatedInventory.save();
+    return res.status(200).json({ message: "Product Transfer successfully", updatedInventory });
   }
 
-  res.status(200).json({ message: message_2, updatedInventory });
+  res.status(200).json({
+    message: req.query.lang == "ar" ? "تم تحديث المخزون بنجاح!" : "Inventory updated successfully!",
+    updatedInventory,
+  });
 });
+
+const updateTransferProductQuantity = catchAsync(async (req, res, next) => {
+  const { inventoryId, transferId } = req.params; // Inventory and TransferProduct IDs
+  const { newQuantity } = req.body; // New quantity value
+
+  if (!newQuantity || newQuantity <= 0) {
+    return res.status(400).json({ message: "Invalid quantity value" });
+  }
+
+  const inventory = await inventoryModel.findById(inventoryId);
+  if (!inventory) {
+    return res.status(404).json({ message: "Inventory not found" });
+  }
+
+  const transferProduct = inventory.transferProduct.find(
+    (tp) => tp._id.toString() === transferId
+  );
+  if (!transferProduct) {
+    return res.status(404).json({ message: "Transfer product not found" });
+  }
+
+  const mainBranchId = transferProduct.fromBranch;
+  const targetBranchId = transferProduct.toBranch;
+  const product = await productModel.findById(transferProduct.product);
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  const mainBranchVariant = product.productVariations.find(
+    (v) =>
+      v.branch.toString() === mainBranchId.toString() &&
+      v.color === transferProduct.color &&
+      JSON.stringify(v.size) === JSON.stringify(transferProduct.size)
+  );
+
+  const targetBranchVariant = product.productVariations.find(
+    (v) =>
+      v.branch.toString() === targetBranchId.toString() &&
+      v.color === transferProduct.color &&
+      JSON.stringify(v.size) === JSON.stringify(transferProduct.size)
+  );
+
+  if (!mainBranchVariant || !targetBranchVariant) {
+    return res.status(404).json({ message: "Product variant not found in branches" });
+  }
+
+  const quantityDiff = newQuantity - transferProduct.quantity;
+
+  if (quantityDiff > 0 && mainBranchVariant.quantity < quantityDiff) {
+    return res.status(400).json({
+      message: `Insufficient stock in MAINBRANCH. Available: ${mainBranchVariant.quantity}, Requested: ${quantityDiff}`,
+    });
+  }
+
+  // Adjust quantities
+  mainBranchVariant.quantity -= quantityDiff;
+  targetBranchVariant.quantity += quantityDiff;
+
+  transferProduct.quantity = newQuantity;
+
+  await product.markModified("productVariations");
+  await product.save();
+  await inventory.save();
+
+  res.status(200).json({ message: "Transfer product quantity updated successfully", inventory });
+});
+
 const deleteInventory = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
@@ -201,4 +255,5 @@ export {
   getInventoryById,
   deleteInventory,
   updateInventory,
+  updateTransferProductQuantity,
 };

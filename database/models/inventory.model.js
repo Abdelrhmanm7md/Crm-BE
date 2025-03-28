@@ -7,11 +7,51 @@ const inventorySchema = mongoose.Schema(
       type: String,
       required: [true, "Name is a required field."],
     },
-    products:{
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "product",
-      default: [],
-    },
+    products: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "product",
+        default: [],
+      },
+    ],
+    transferProduct: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "product",
+          required: true,
+        },
+        fromBranch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "branch",
+          required: true,
+        },
+        toBranch: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "branch",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+        },
+        color: String,
+        size: mongoose.Schema.Types.Mixed, // To handle different size formats
+        weight: Number,
+        dimensions: String,
+        costPrice: Number,
+        sellingPrice: Number,
+        salePrice: Number,
+        transferredBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "user",
+        },
+        transferredAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
