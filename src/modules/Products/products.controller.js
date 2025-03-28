@@ -592,8 +592,8 @@ const deleteProductVariation = async (req, res) => {
     }
 
     const variation = product.productVariations[0];
-console.log("product",product);
-console.log("variation",variation);
+    console.log("product", product);
+    console.log("variation", variation);
 
     if (!variation) {
       return res.status(404).json({ message: "Variation not found" });
@@ -606,7 +606,7 @@ console.log("variation",variation);
       await productModel.findByIdAndUpdate(
         productId,
         { $pull: { productVariations: { _id: variationId } } },
-        { new: true ,userId:new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
+        { new: true, userId: new mongoose.Types.ObjectId(process.env.WEBSITEADMIN) }
       );
 
       return res.status(200).json({ message: "Variation deleted successfully" });
@@ -622,8 +622,8 @@ console.log("variation",variation);
         console.log(`Checking variation: branch=${v.branch.toString()}, color=${v.color}, size=${JSON.stringify(v.size)}`);
         return (
           v.branch.toString() === mainBranchId.toString() &&
-          v.color === variant.color &&
-          JSON.stringify(v.size) === JSON.stringify(variant.size)
+          v.color === variation.color && // ✅ Fixed typo
+          JSON.stringify(v.size) === JSON.stringify(variation.size) // ✅ Fixed typo
         );
       });
 
@@ -631,19 +631,18 @@ console.log("variation",variation);
         mainBranchVariant.quantity += variation.quantity;
       } else {
         updatedProduct.productVariations.push({
-            costPrice: variation.costPrice || 0,
-            sellingPrice: variation.sellingPrice || 0,
-            salePrice: variation.salePrice || 0,
-            quantity: variation.quantity || 0,  // Ensure quantity is not missing
-            photo: variation.photo || "",
-            color: variation.color || "",  // Default values to prevent missing data
-            size: variation.size || [],
-            weight: variation.weight || "",
-            dimensions: variation.dimensions || { length: "", width: "", height: "" },
-            branch: mainBranchId,
+          costPrice: variation.costPrice || 0,
+          sellingPrice: variation.sellingPrice || 0,
+          salePrice: variation.salePrice || 0,
+          quantity: variation.quantity || 0,  // Ensure quantity is not missing
+          photo: variation.photo || "",
+          color: variation.color || "",  // ✅ Default values to prevent missing data
+          size: variation.size || [],
+          weight: variation.weight || "",
+          dimensions: variation.dimensions || { length: "", width: "", height: "" },
+          branch: mainBranchId,
         });
-    
-    }
+      }
 
       updatedProduct.productVariations = updatedProduct.productVariations.filter(
         (v) => !v._id.equals(variationId)
