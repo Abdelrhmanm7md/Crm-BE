@@ -592,6 +592,7 @@ const deleteProductVariation = async (req, res) => {
     }
 
     const variation = product.productVariations[0];
+console.log("product",product);
 console.log("variation",variation);
 
     if (!variation) {
