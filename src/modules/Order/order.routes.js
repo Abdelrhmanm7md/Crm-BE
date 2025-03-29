@@ -10,6 +10,7 @@ orderRouter.get("/status/:status",protectRoutes, orderController.getAllOrdersByS
 orderRouter.get("/shipping/:shippingId",protectRoutes, orderController.getAllOrdersByShippingCompany);
 orderRouter.get("/:id",protectRoutes, orderController.getOrderById);
 orderRouter.put("/:id",protectRoutes, orderController.updateOrder);
+orderRouter.put("/wordpress/:orderId",protectRoutes, orderController.updateWooCommerceOrder);
 orderRouter.post("/",protectRoutes, orderController.createOrder);
 orderRouter.delete("/:id",protectRoutes, orderController.deleteOrder);
 
