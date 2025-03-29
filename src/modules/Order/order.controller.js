@@ -578,7 +578,7 @@ const updateWooCommerceOrder = async (req, res) => {
     const updateData = req.body; // Data to update (customer, products, status, etc.)
 
     // 1️⃣ Find the order in MongoDB
-    const existingOrder = await orderModel.findOne({ _id:orderId });
+    const existingOrder = await orderModel.findOne({ SKU: `WP-${orderId}` });
     if (!existingOrder) {
       return res.status(404).json({ message: "Order not found in database" });
     }
