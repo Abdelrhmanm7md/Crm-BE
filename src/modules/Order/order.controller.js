@@ -34,7 +34,7 @@ const createOrder = catchAsync(async (req, res, next) => {
 
       const storeItem = product.productVariations.find(
         (variation) => String(variation.branch) === String(req.body.branch)
-      );
+      );      
 
       if (!storeItem) {
         const err_2 =
@@ -122,14 +122,10 @@ const createOrder = catchAsync(async (req, res, next) => {
       req.body.totalAmount =
         totalBeforeDiscount - discountAmount + shippingPrice;
       req.body.realTotalAmount =
-        totalBeforeDiscount -
-        discountAmount +
-        Math.abs(realShippingPrice - shippingPrice);
+        totalBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
     } else {
-      req.body.totalAmount =
-        parseFloat(totalBeforeDiscount) + parseFloat(shippingPrice);
-      req.body.realTotalAmount =
-        totalBeforeDiscount + Math.abs(realShippingPrice - shippingPrice);
+      req.body.totalAmount = parseFloat(totalBeforeDiscount) + parseFloat(shippingPrice);
+      req.body.realTotalAmount = totalBeforeDiscount + (Math.abs(realShippingPrice - shippingPrice));
     }
 
     // Create and save order
@@ -160,9 +156,7 @@ const getAllOrder = catchAsync(async (req, res, next) => {
 const getOrderById = catchAsync(async (req, res, next) => {
   let { id } = req.params;
 
-  let result = await orderModel
-    .findById(id)
-    .populate("productVariations.product");
+  let result = await orderModel.findById(id).populate("productVariations.product");
   let message_1 = "No Order was found!";
   if (req.query.lang == "ar") {
     message_1 = "لا يوجد طلبات!";
@@ -287,11 +281,9 @@ const updateOrder = catchAsync(async (req, res, next) => {
     req.body.totalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
     req.body.realTotalAmount =
-      req.body.totalAmountBeforeDiscount -
-      discountAmount +
-      Math.abs(realShippingPrice - shippingPrice);
+      req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
 
-    req.body.updatedBy = req.userId;
+      req.body.updatedBy = req.userId;
 
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
       new: true,
@@ -586,7 +578,7 @@ const updateWooCommerceOrder = async (req, res) => {
     const updateData = req.body; // Data to update (customer, products, status, etc.)
 
     // 1️⃣ Find the order in MongoDB
-    const existingOrder = await orderModel.findOne({ _id: orderId });
+    const existingOrder = await orderModel.findOne({ _id:orderId });
     if (!existingOrder) {
       return res.status(404).json({ message: "Order not found in database" });
     }
@@ -594,25 +586,20 @@ const updateWooCommerceOrder = async (req, res) => {
     // 2️⃣ Prepare update payload for WooCommerce
     let wooUpdatePayload = {};
 
-    if (updateData.orderStatus)
-      wooUpdatePayload.status = updateData.orderStatus;
-    if (updateData.customerNotes)
-      wooUpdatePayload.customer_note = updateData.customerNotes;
-    if (updateData.shippingPrice)
-      wooUpdatePayload.shipping_total = updateData.shippingPrice;
+    if (updateData.orderStatus) wooUpdatePayload.status = updateData.orderStatus;
+    if (updateData.customerNotes) wooUpdatePayload.customer_note = updateData.customerNotes;
+    if (updateData.shippingPrice) wooUpdatePayload.shipping_total = updateData.shippingPrice;
 
     if (updateData.productVariations) {
-      wooUpdatePayload.line_items = updateData.productVariations.map(
-        (item) => ({
-          product_id: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-          meta_data: [
-            { key: "Color", value: item.color },
-            { key: "Size", value: item.size.join(", ") },
-          ],
-        })
-      );
+      wooUpdatePayload.line_items = updateData.productVariations.map((item) => ({
+        product_id: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        meta_data: [
+          { key: "Color", value: item.color },
+          { key: "Size", value: item.size.join(", ") },
+        ],
+      }));
     }
 
     // 3️⃣ Sync order changes to WooCommerce
@@ -637,7 +624,7 @@ const updateWooCommerceOrder = async (req, res) => {
 
     // 4️⃣ Update the order in MongoDB
     const updatedOrder = await orderModel.findOneAndUpdate(
-      { _id: orderId },
+      { SKU: `WP-${orderId}` },
       updateData,
       { new: true, runValidators: true, userId: req.userId }
     );
