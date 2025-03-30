@@ -76,12 +76,12 @@ const getAllCapital = catchAsync(async (req, res, next) => {
         totalOrders: { $sum: 1 },
         completedOrders: {
           $sum: { $cond: [{ $eq: ["$orderStatus", "completed"] }, 1, 0] },
-        },
+        }, 
         totalCompletedAmount: {
           $sum: {
             $cond: [
               { $eq: ["$orderStatus", "completed"] }, 
-              { $ifNull: ["$realTotalAmount", 0] }, 
+              { $subtract: ["$realTotalAmount", "$realShippingPrice"] }, 
               0,
             ],
           },
@@ -91,11 +91,10 @@ const getAllCapital = catchAsync(async (req, res, next) => {
   ]);
   
   const ordersData = {
-    reason: "Orders",
-    amount: orderResult[0]?.totalCompletedAmount || 0,
-    completedOrdersCount: orderResult[0]?.completedOrders || 0,
-  };
-  
+    reason : "Orders",
+    amount : orderResult[0]?.totalCompletedAmount,
+    completedOrdersCount : orderResult[0]?.completedOrders,
+  }
   const salaryResult = await salaryModel.aggregate([
     {
       $group: {

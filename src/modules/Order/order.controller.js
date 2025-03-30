@@ -1,6 +1,5 @@
 import { orderModel } from "../../../database/models/order.model.js";
 import ApiFeature from "../../utils/apiFeature.js";
-import exportData from "../../utils/export.js";
 import catchAsync from "../../utils/middleWare/catchAsyncError.js";
 import axios from "axios";
 import cron from "node-cron";
@@ -65,7 +64,7 @@ const createOrder = catchAsync(async (req, res, next) => {
 
     // Apply coupon if provided
     let shippingPrice = req.body.shippingPrice || 0;
-    let realShippingPrice = req.body.realShippingPrice || 0;
+    let realShippingPrice = req.body.realShippingPrice || shippingPrice;
     if (req.body.coupon) {
       const coupon = await couponModel.findById(req.body.coupon);
       if (!coupon) return next(new AppError("Invalid coupon", 400));
@@ -122,10 +121,13 @@ const createOrder = catchAsync(async (req, res, next) => {
       req.body.totalAmount =
         totalBeforeDiscount - discountAmount + shippingPrice;
       req.body.realTotalAmount =
-        totalBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
+        totalBeforeDiscount - discountAmount - realShippingPrice;
+      // req.body.realTotalAmount =
+      //   totalBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
     } else {
       req.body.totalAmount = parseFloat(totalBeforeDiscount) + parseFloat(shippingPrice);
-      req.body.realTotalAmount = totalBeforeDiscount + (Math.abs(realShippingPrice - shippingPrice));
+      req.body.realTotalAmount = totalBeforeDiscount - realShippingPrice
+      // req.body.realTotalAmount = totalBeforeDiscount + (Math.abs(realShippingPrice - shippingPrice));
     }
 
     // Create and save order
@@ -216,7 +218,7 @@ const updateOrder = catchAsync(async (req, res, next) => {
 
     let shippingPrice = req.body.shippingPrice || existingOrder.shippingPrice;
     let realShippingPrice =
-      req.body.realShippingPrice || existingOrder.realShippingPrice;
+      req.body.realShippingPrice || shippingPrice;
     let discountAmount = 0;
 
     // Apply coupon if provided
@@ -281,7 +283,9 @@ const updateOrder = catchAsync(async (req, res, next) => {
     req.body.totalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
     req.body.realTotalAmount =
-      req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
+      req.body.totalAmountBeforeDiscount - discountAmount  - realShippingPrice;
+    // req.body.realTotalAmount =
+    //   req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
 
       req.body.updatedBy = req.userId;
 
