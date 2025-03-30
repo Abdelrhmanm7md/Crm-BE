@@ -31,9 +31,11 @@ const createOrder = catchAsync(async (req, res, next) => {
         return next(new AppError(err_1, 400));
       }
 
-      const storeItem = product.productVariations.find(
-        (variation) => String(variation.branch) === String(req.body.branch)
-      );      
+      const storeItem = product.productVariations.find((variation) => 
+        variation.branch.toString() === req.body.branch.toString() &&
+        variation.color === item.color &&
+        variation.size.some(size => item.size.includes(size)) // Check if at least one size matches
+      );          
 
       if (!storeItem) {
         const err_2 =
@@ -42,8 +44,6 @@ const createOrder = catchAsync(async (req, res, next) => {
             : `Branch ${req.body.branch} not found for product: ${product.name}`;
         return next(new AppError(err_2, 400));
       }
-console.log(storeItem ,"ssssssssssssssss");
-console.log(storeItem.quantity,"ssssssssssssssss", item.quantity, product.fromWordPress);
 
       if (storeItem.quantity < item.quantity && !product.fromWordPress) {
         const err_3 =
