@@ -217,8 +217,12 @@ const updateOrder = catchAsync(async (req, res, next) => {
     }
 
     let shippingPrice = req.body.shippingPrice || existingOrder.shippingPrice;
-    let realShippingPrice =
-      req.body.realShippingPrice || shippingPrice;
+    let realShippingPrice = 0
+    if (existingOrder.fromWordPress == true) {
+      realShippingPrice = req.body.realShippingPrice || 0;
+    }else{
+      realShippingPrice = req.body.realShippingPrice || shippingPrice;
+    }
     let discountAmount = 0;
 
     // Apply coupon if provided
@@ -282,11 +286,13 @@ const updateOrder = catchAsync(async (req, res, next) => {
     // Calculate the final total
     req.body.totalAmount =
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
-    req.body.realTotalAmount =
-      req.body.totalAmountBeforeDiscount - discountAmount  - realShippingPrice;
-    // req.body.realTotalAmount =
-    //   req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
-
+      if (existingOrder.fromWordPress == true) {
+        req.body.realTotalAmount =
+        req.body.totalAmountBeforeDiscount - discountAmount - (Math.abs(realShippingPrice - shippingPrice));
+      }else{
+      req.body.realTotalAmount =
+        req.body.totalAmountBeforeDiscount - discountAmount  - realShippingPrice;
+    }
       req.body.updatedBy = req.userId;
 
     const updatedOrder = await orderModel.findByIdAndUpdate(orderId, req.body, {
