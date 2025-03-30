@@ -574,8 +574,8 @@ cron.schedule("* * * * *", () => {
 });
 const updateWooCommerceOrder = async (req, res) => {
   try {
-    const { orderId } = req.params; // ID from MongoDB (or WooCommerce ID)
-    const updateData = req.body; // Data to update (customer, products, status, etc.)
+    const { orderId } = req.params;
+    const updateData = req.body;
 
     // 1️⃣ Find the order in MongoDB
     const existingOrder = await orderModel.findOne({ SKU: `WP-${orderId}` });
@@ -583,28 +583,44 @@ const updateWooCommerceOrder = async (req, res) => {
       return res.status(404).json({ message: "Order not found in database" });
     }
 
+    // Extract WooCommerce Order ID
+    const wooOrderId = existingOrder.SKU.replace("WP-", "");
+    if (isNaN(wooOrderId)) {
+      return res.status(400).json({ message: "Invalid WooCommerce Order ID" });
+    }
+
     // 2️⃣ Prepare update payload for WooCommerce
     let wooUpdatePayload = {};
-
     if (updateData.orderStatus) wooUpdatePayload.status = updateData.orderStatus;
     if (updateData.customerNotes) wooUpdatePayload.customer_note = updateData.customerNotes;
     if (updateData.shippingPrice) wooUpdatePayload.shipping_total = updateData.shippingPrice;
 
-    if (updateData.productVariations) {
-      wooUpdatePayload.line_items = updateData.productVariations.map((item) => ({
-        product_id: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-        meta_data: [
-          { key: "Color", value: item.color },
-          { key: "Size", value: item.size.join(", ") },
-        ],
-      }));
+    // Validate product variations
+    if (updateData.productVariations && updateData.productVariations.length > 0) {
+      wooUpdatePayload.line_items = updateData.productVariations.map((item) => {
+        if (!item.productId || !item.quantity) {
+          throw new Error("Missing product ID or quantity in line items");
+        }
+        return {
+          product_id: item.productId,
+          quantity: item.quantity,
+          ...(item.price ? { price: item.price } : {}),
+          meta_data: [
+            ...(item.color ? [{ key: "Color", value: item.color }] : []),
+            ...(item.size?.length ? [{ key: "Size", value: item.size.join(", ") }] : []),
+          ],
+        };
+      });
+    }
+
+    // Ensure payload is not empty
+    if (Object.keys(wooUpdatePayload).length === 0) {
+      return res.status(400).json({ message: "No valid update data provided" });
     }
 
     // 3️⃣ Sync order changes to WooCommerce
     const { data: wooResponse } = await axios.put(
-      `https://a2mstore.com/wp-json/wc/v3/orders/${orderId}`,
+      `https://a2mstore.com/wp-json/wc/v3/orders/${wooOrderId}`,
       wooUpdatePayload,
       {
         auth: {
@@ -626,18 +642,21 @@ const updateWooCommerceOrder = async (req, res) => {
     const updatedOrder = await orderModel.findOneAndUpdate(
       { SKU: `WP-${orderId}` },
       updateData,
-      { new: true, runValidators: true, userId: req.userId }
+      { new: true, runValidators: true }
     );
 
-    console.log(`✅ Order updated in WooCommerce & DB: ${orderId}`);
+    console.log(`✅ Order updated in WooCommerce & DB: ${wooOrderId}`);
     res.status(200).json({
       message: "Order updated successfully",
       wooCommerceResponse: wooResponse,
       dbOrder: updatedOrder,
     });
   } catch (error) {
-    console.error("❌ Error updating order:", error);
-    res.status(500).json({ message: "Error updating order", error });
+    console.error("❌ Error updating order:", error.response?.data || error);
+    res.status(500).json({
+      message: "Error updating order",
+      error: error.response?.data || error.message,
+    });
   }
 };
 
