@@ -42,6 +42,7 @@ const createOrder = catchAsync(async (req, res, next) => {
             : `Branch ${req.body.branch} not found for product: ${product.name}`;
         return next(new AppError(err_2, 400));
       }
+console.log(storeItem.quantity,"ssssssssssssssss", item.quantity, product.fromWordPress);
 
       if (storeItem.quantity < item.quantity && !product.fromWordPress) {
         const err_3 =
