@@ -515,13 +515,8 @@ const fetchAndStoreOrders = async () => {
       };
 
       if (existingOrder) {
-        orderData.updatedBy = existingOrder.createdBy;
-        await orderModel.findByIdAndUpdate(existingOrder._id, orderData, {
-          runValidators: true,
-          userId: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
-          new: true,
-        });
-        console.log(`✅ Order updated: ${item.id}`);
+        console.log(`🔹 Order already exists: ${item.id}, skipping update.`);
+        continue; // Skip this order and move to the next one
       } else {
         orderData.createdBy = new mongoose.Types.ObjectId(
           `${process.env.WEBSITEADMIN}`
