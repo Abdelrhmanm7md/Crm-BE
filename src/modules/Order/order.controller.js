@@ -64,7 +64,7 @@ const createOrder = catchAsync(async (req, res, next) => {
 
     // Apply coupon if provided
     let shippingPrice = req.body.shippingPrice || 0;
-    let realShippingPrice = req.body.realShippingPrice || shippingPrice;
+    let realShippingPrice =  shippingPrice || req.body.realShippingPrice ;
     if (req.body.coupon) {
       const coupon = await couponModel.findById(req.body.coupon);
       if (!coupon) return next(new AppError("Invalid coupon", 400));
@@ -504,6 +504,7 @@ const fetchAndStoreOrders = async () => {
         productVariations: productVariations,
         fromWordPress: true,
         shippingPrice: parseFloat(item.shipping_total),
+        realShippingPrice: 0,
         createdBy: new mongoose.Types.ObjectId(`${process.env.WEBSITEADMIN}`),
       };
 
