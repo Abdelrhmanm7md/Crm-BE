@@ -288,7 +288,7 @@ const updateOrder = catchAsync(async (req, res, next) => {
       req.body.totalAmountBeforeDiscount - discountAmount + shippingPrice;
       if (existingOrder.fromWordPress == true) {
         req.body.realTotalAmount =
-        req.body.totalAmountBeforeDiscount - discountAmount - (Math.abs(realShippingPrice - shippingPrice));
+        req.body.totalAmountBeforeDiscount - discountAmount + (Math.abs(realShippingPrice - shippingPrice));
       }else{
       req.body.realTotalAmount =
         req.body.totalAmountBeforeDiscount - discountAmount  - realShippingPrice;
