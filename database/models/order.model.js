@@ -119,7 +119,6 @@ const orderSchema = mongoose.Schema(
     },
     realShippingPrice: {
       type: Number,
-      default: 0,
       required: true,
     },
     realTotalAmount: {
