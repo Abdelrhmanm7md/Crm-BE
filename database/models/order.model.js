@@ -356,6 +356,7 @@ orderSchema.pre(/^find/, function () {
   this.populate("supplier");
   this.populate("shippingCompany");
   this.populate("branch");
+  this.populate("createdBy");
   this.populate("updatedBy");
 });
 export const orderModel = mongoose.model("order", orderSchema);
