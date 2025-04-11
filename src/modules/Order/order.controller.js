@@ -212,6 +212,7 @@ const updateOrder = catchAsync(async (req, res, next) => {
         status: req.body.orderStatus,
         date: new Date(),
       });
+      req.body.statusHistory = existingOrder.statusHistory;
     }
     // Recalculate totalBeforeDiscount if products are updated
     if (req.body.productVariations) {
