@@ -13,17 +13,14 @@ const orderSchema = mongoose.Schema(
     SKU: {
       type: String,
       default: " ",
-      // required: true,
     },
     supplier: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "supplier",
-      // required: true,
     },
     shippingCompany: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "shippingCompany",
-      // required: true,
     },
     branch: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,13 +34,11 @@ const orderSchema = mongoose.Schema(
     },
     customerNotes: {
       type: String,
-      // required: true,
     },
     coupon: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "coupon",
       default: null,
-      // required: true,
     },
     address: {
       type: String,
@@ -60,7 +55,6 @@ const orderSchema = mongoose.Schema(
     },
     totalAmount: {
       type: Number,
-      // required: true,
     },
     orderStatus: {
       type: String,
@@ -86,7 +80,6 @@ const orderSchema = mongoose.Schema(
           product: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "product",
-            // required: true,
           },
           price: {
             type: Number,
@@ -94,19 +87,15 @@ const orderSchema = mongoose.Schema(
           },
           quantity: {
             type: Number,
-            // required: true,
           },
           color: {
             type: String,
-            // required: true,
           },
           size: {
             type: [String],
-            // required: true,
           },
           id: {
             type: String,
-            // required: true,
           },
         },
       ],
@@ -134,15 +123,24 @@ const orderSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    statusHistory: {
+      type: [
+        {
+          status: { type: String },
+          date: { type: Date, default: Date.now },
+        }
+      ],
+      default: function () {
+        return [{ status: this.orderStatus || "processing", date: new Date() }];
+      }
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
-      // required: true,
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
-      // required: true,
     },
   },
   { timestamps: true }

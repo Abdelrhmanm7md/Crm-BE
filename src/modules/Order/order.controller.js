@@ -207,7 +207,12 @@ const updateOrder = catchAsync(async (req, res, next) => {
     if (req.user) {
       req.body.createdBy = req.user._id;
     }
-
+    if (req.body.orderStatus && req.body.orderStatus !== existingOrder.orderStatus) {
+      existingOrder.statusHistory.push({
+        status: req.body.orderStatus,
+        date: new Date(),
+      });
+    }
     // Recalculate totalBeforeDiscount if products are updated
     if (req.body.productVariations) {
       req.body.totalAmountBeforeDiscount = req.body.productVariations.reduce(
