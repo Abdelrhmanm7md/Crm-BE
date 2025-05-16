@@ -15,5 +15,13 @@ const getAllLog = catchAsync(async (req, res, next) => {
     results,
   });
 });
+const deleteAllLog = catchAsync(async (req, res, next) => {
+  let ApiFeat = new ApiFeature(logModel.deleteMany(), req.query);
 
-export { getAllLog, };
+
+  res.json({
+    message: "Done",
+  });
+});
+
+export { getAllLog, deleteAllLog};
