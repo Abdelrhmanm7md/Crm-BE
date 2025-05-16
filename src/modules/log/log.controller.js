@@ -7,7 +7,7 @@ const getAllLog = catchAsync(async (req, res, next) => {
   await ApiFeat.pagination(); // Ensure pagination waits for total count
 
   let results = await ApiFeat.mongooseQuery;
-
+  
   res.json({
     message: "Done",
     page: ApiFeat.page,
@@ -16,11 +16,9 @@ const getAllLog = catchAsync(async (req, res, next) => {
   });
 });
 const deleteAllLog = catchAsync(async (req, res, next) => {
-  let ApiFeat = new ApiFeature(logModel.deleteMany(), req.query);
-
-
+  let results = await logModel.deleteMany();
   res.json({
-    message: "Done",
+    message: "All logs deleted successfully",
   });
 });
 
