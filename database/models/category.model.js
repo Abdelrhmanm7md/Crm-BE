@@ -70,25 +70,45 @@ categorySchema.pre("findOneAndUpdate", async function (next) {
   const beforeUpdate = await this.model.findById(categoryId).lean();
   if (!beforeUpdate) return next();
 
-  // Flatten update if it contains $set
-  const updatedFields = update?.$set || update;
+  let proposedChanges = {};
 
-  // Compare fields to detect changes
-  let hasChanges = false;
-  for (const key in updatedFields) {
-    if (updatedFields.hasOwnProperty(key)) {
-      const newValue = updatedFields[key];
-      const oldValue = beforeUpdate[key];
+  if (update.$set) {
+    proposedChanges = { ...proposedChanges, ...update.$set };
+  }
 
-      // Do shallow comparison only
-      if (String(newValue) !== String(oldValue)) {
-        hasChanges = true;
-        break;
-      }
+  if (update.$unset) {
+    for (const key in update.$unset) {
+      proposedChanges[key] = undefined;
     }
   }
 
-  if (!hasChanges) return next(); // No changes → skip logging
+  if (!update.$set && !update.$unset) {
+    proposedChanges = { ...update };
+  }
+
+  // Deep compare two values (arrays, objects, primitives)
+  const isEqual = (a, b) => {
+    if (a === b) return true;
+
+    if (typeof a !== typeof b) return false;
+
+    if (typeof a === "object" && a && b) {
+      const aKeys = Object.keys(a);
+      const bKeys = Object.keys(b);
+      if (aKeys.length !== bKeys.length) return false;
+
+      return aKeys.every(key => isEqual(a[key], b[key]));
+    }
+
+    return false;
+  };
+
+  const hasChanges = Object.entries(proposedChanges).some(([key, newVal]) => {
+    const oldVal = key.split('.').reduce((obj, part) => (obj ? obj[part] : undefined), beforeUpdate);
+    return !isEqual(oldVal, newVal);
+  });
+
+  if (!hasChanges) return next(); // ✅ Skip logging if nothing changed
 
   try {
     await logModel.create({
@@ -97,14 +117,15 @@ categorySchema.pre("findOneAndUpdate", async function (next) {
       targetModel: "Category",
       targetId: categoryId,
       before: beforeUpdate,
-      after: updatedFields,
+      after: proposedChanges,
     });
   } catch (error) {
-    console.error("Error logging category update:", error);
+    console.error("❌ Error logging category update:", error);
   }
 
   next();
 });
+
 categorySchema.pre(
   "deleteOne",
   { document: true, query: false },
