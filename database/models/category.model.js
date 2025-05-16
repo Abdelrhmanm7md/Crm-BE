@@ -63,21 +63,41 @@ categorySchema.pre("save", async function (next) {
 categorySchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
   const categoryId = this.getQuery()._id || this.getQuery().id;
-  const actionBy = this.options.userId; // ✅ Get userId from query options
+  const actionBy = this.options.userId;
 
   if (!categoryId) return next();
 
   const beforeUpdate = await this.model.findById(categoryId).lean();
-  if (!beforeUpdate) return next(); // If category doesn't exist, skip logging
+  if (!beforeUpdate) return next();
+
+  // Flatten update if it contains $set
+  const updatedFields = update?.$set || update;
+
+  // Compare fields to detect changes
+  let hasChanges = false;
+  for (const key in updatedFields) {
+    if (updatedFields.hasOwnProperty(key)) {
+      const newValue = updatedFields[key];
+      const oldValue = beforeUpdate[key];
+
+      // Do shallow comparison only
+      if (String(newValue) !== String(oldValue)) {
+        hasChanges = true;
+        break;
+      }
+    }
+  }
+
+  if (!hasChanges) return next(); // No changes → skip logging
 
   try {
     await logModel.create({
-      user: actionBy, // Store the user who performed the update
+      user: actionBy,
       action: "update category",
       targetModel: "Category",
       targetId: categoryId,
       before: beforeUpdate,
-      after: update, // Stores the update object only (not the full document)
+      after: updatedFields,
     });
   } catch (error) {
     console.error("Error logging category update:", error);
@@ -85,7 +105,6 @@ categorySchema.pre("findOneAndUpdate", async function (next) {
 
   next();
 });
-
 categorySchema.pre(
   "deleteOne",
   { document: true, query: false },
