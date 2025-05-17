@@ -1,5 +1,6 @@
 import { customerModel } from "../../../database/models/customer.model.js";
 import { orderModel } from "../../../database/models/order.model.js";
+import { productModel } from "../../../database/models/product.model.js";
 import { shippingCompanyModel } from "../../../database/models/shippingCompany.model.js";
 import { supplierModel } from "../../../database/models/supplier.model.js";
 import { userModel } from "../../../database/models/user.model.js";
@@ -37,6 +38,7 @@ try{
   results.suppliersCount = await supplierModel.countDocuments();  
   results.customersCount = await customerModel.countDocuments();  
   results.usersCount = await userModel.countDocuments();
+  results.totalProducts = await productModel.countDocuments();
   const orderResult = await orderModel.aggregate([
     {
       $group: {
